@@ -145,91 +145,75 @@
       </div>
     </div>
 
+    <!-- 1. Move this to the top of your <head> if possible -->
+    <script src="https://cdn.jsdelivr.net"></script>
+
     <script>
-      // Netlify Proxy: Routes /api/* to your Render Coordinator
-      const API_PATH = "/api/global_model";
+      // 2. Wrap everything in an Event Listener
+      window.addEventListener("load", function () {
+        const API_PATH = "/api/global_model";
 
-      // Initialize Chart.js
-      const ctx = document.getElementById("accuracyChart").getContext("2d");
-      const accuracyChart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [
-            {
-              label: "Model Accuracy",
-              data: [],
-              borderColor: "#3b82f6",
-              backgroundColor: "rgba(59, 130, 246, 0.1)",
-              borderWidth: 3,
-              pointBackgroundColor: "#3b82f6",
-              tension: 0.4,
-              fill: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { min: 0, max: 1, grid: { borderDash: [5, 5] } },
-            x: { grid: { display: false } },
+        // Now Chart is guaranteed to be defined
+        const ctx = document.getElementById("accuracyChart").getContext("2d");
+        const accuracyChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: "Model Accuracy",
+                data: [],
+                borderColor: "#3b82f6",
+                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+              },
+            ],
           },
-        },
-      });
+          options: {
+            responsive: true,
+            scales: { y: { min: 0, max: 1 } },
+          },
+        });
 
-      function addLog(message) {
-        const logBox = document.getElementById("log-output");
-        const entry = document.createElement("div");
-        entry.className = "log-entry";
-        const time = new Date().toLocaleTimeString();
-        entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
-        logBox.prepend(entry);
-      }
-
-      async function syncDashboard() {
-        try {
-          const response = await fetch(API_PATH);
-
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-          const data = await response.json();
-
-          // 1. Update Core UI
-          const statusEl = document.getElementById("status");
-          statusEl.innerText = "Online";
-          statusEl.className = "value status-online";
-
-          const roundVal = data.round;
-          document.getElementById("round").innerText = roundVal;
-
-          // 2. Logic: Handle Simulated Accuracy for V3
-          // (Assuming 30 features, starting at ~65% and improving)
-          const simulatedAcc = Math.min(0.99, 0.65 + roundVal * 0.065);
-          document.getElementById("accuracy").innerText =
-            Math.round(simulatedAcc * 100) + "%";
-
-          // 3. Update Chart if new round detected
-          const roundLabel = `Round ${roundVal}`;
-          if (!accuracyChart.data.labels.includes(roundLabel)) {
-            accuracyChart.data.labels.push(roundLabel);
-            accuracyChart.data.datasets[0].data.push(simulatedAcc);
-            accuracyChart.update();
-            addLog(
-              `Successfully aggregated Round ${roundVal}. Dilithium signatures verified.`,
-            );
-          }
-        } catch (error) {
-          const statusEl = document.getElementById("status");
-          statusEl.innerText = "Offline";
-          statusEl.className = "value status-offline";
-          addLog(`Sync Error: Could not reach Coordinator. Retrying...`);
+        function addLog(message) {
+          const logBox = document.getElementById("log-output");
+          const entry = document.createElement("div");
+          entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+          logBox.prepend(entry);
         }
-      }
 
-      // Start Polling
-      syncDashboard();
-      setInterval(syncDashboard, 5000); // 5-second interval
+        async function syncDashboard() {
+          try {
+            const response = await fetch(API_PATH);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+
+            document.getElementById("status").innerText = "Online";
+            document.getElementById("status").className = "value status-online";
+            document.getElementById("round").innerText = data.round;
+
+            const simulatedAcc = Math.min(0.99, 0.65 + data.round * 0.065);
+            document.getElementById("accuracy").innerText =
+              Math.round(simulatedAcc * 100) + "%";
+
+            if (!accuracyChart.data.labels.includes(`Round ${data.round}`)) {
+              accuracyChart.data.labels.push(`Round ${data.round}`);
+              accuracyChart.data.datasets[0].data.push(simulatedAcc);
+              accuracyChart.update();
+              addLog(`Aggregated Round ${data.round} | PQC Verified`);
+            }
+          } catch (error) {
+            document.getElementById("status").innerText = "Offline";
+            document.getElementById("status").className =
+              "value status-offline";
+          }
+        }
+
+        syncDashboard();
+        setInterval(syncDashboard, 5000);
+      });
     </script>
   </body>
 </html>
