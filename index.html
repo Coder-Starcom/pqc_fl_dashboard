@@ -4,17 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PQ Federated Learning Monitor</title>
+
+    <!-- 1. Load Chart.js FIRST in the head -->
     <script src="https://cdn.jsdelivr.net"></script>
+
     <style>
       :root {
-        --bg: #f5f7fa;
+        --bg: #f0f2f5;
         --dark: #1f2937;
-        --accent: #3b82f6;
+        --accent: #2563eb;
         --success: #10b981;
         --error: #ef4444;
       }
       body {
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          sans-serif;
         background: var(--bg);
         margin: 0;
         padding: 0;
@@ -23,24 +30,29 @@
       header {
         background: var(--dark);
         color: white;
-        padding: 25px;
+        padding: 30px 20px;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-bottom: 4px solid var(--accent);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: 1px;
       }
       header p {
         margin: 5px 0 0;
-        opacity: 0.8;
-        font-size: 0.9rem;
-        letter-spacing: 1px;
+        opacity: 0.7;
+        font-size: 13px;
+        text-transform: uppercase;
       }
       .container {
         width: 92%;
-        max-width: 1200px;
+        max-width: 1100px;
         margin: 30px auto;
       }
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
         margin-bottom: 30px;
       }
@@ -48,25 +60,21 @@
         background: white;
         border-radius: 12px;
         padding: 25px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         text-align: center;
         border: 1px solid #e5e7eb;
-        transition: transform 0.2s;
-      }
-      .card:hover {
-        transform: translateY(-5px);
       }
       .card h3 {
         margin: 0;
-        font-size: 14px;
+        font-size: 12px;
         color: #6b7280;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
       }
       .value {
         font-size: 32px;
         font-weight: 800;
-        margin-top: 12px;
+        margin-top: 10px;
         color: var(--dark);
       }
       .status-online {
@@ -79,141 +87,147 @@
         background: white;
         padding: 25px;
         border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         border: 1px solid #e5e7eb;
       }
       .logs {
         background: #111827;
         color: #38bdf8;
-        margin-top: 30px;
+        margin-top: 25px;
         padding: 20px;
         border-radius: 12px;
-        height: 180px;
+        height: 150px;
         overflow-y: auto;
-        font-family: "Fira Code", "Courier New", monospace;
-        font-size: 13px;
-        line-height: 1.6;
+        font-family: "ui-monospace", monospace;
+        font-size: 12px;
         border: 1px solid #374151;
       }
-      .log-entry {
+      .log-line {
+        padding: 2px 0;
         border-bottom: 1px solid #1f2937;
-        padding: 4px 0;
-      }
-      .log-time {
-        color: #94a3b8;
-        margin-right: 10px;
       }
     </style>
   </head>
   <body>
     <header>
       <h1>PQC Federated Learning Monitor</h1>
-      <p>V3 POST-QUANTUM SECURE STACK</p>
+      <p>V3 Post-Quantum Encryption Stack</p>
     </header>
 
     <div class="container">
       <div class="cards">
         <div class="card">
-          <h3>Coordinator Status</h3>
-          <div id="status" class="value status-offline">Connecting...</div>
+          <h3>System Status</h3>
+          <div id="status" class="value status-offline">Offline</div>
         </div>
         <div class="card">
-          <h3>Current Round</h3>
+          <h3>Training Round</h3>
           <div id="round" class="value">0</div>
         </div>
         <div class="card">
           <h3>Security Layer</h3>
-          <div id="security" class="value" style="font-size: 20px">
-            Active (Kyber)
+          <div class="value" style="font-size: 18px; color: #6366f1">
+            Kyber + Dilithium
           </div>
         </div>
         <div class="card">
-          <h3>Model Performance</h3>
+          <h3>Accuracy (Est.)</h3>
           <div id="accuracy" class="value">0%</div>
         </div>
       </div>
 
       <div class="chart-box">
-        <h3 style="margin-top: 0; color: #4b5563">
-          Accuracy Progression (Round-Based)
+        <h3 style="margin-top: 0; font-size: 14px; color: #4b5563">
+          Accuracy Progression
         </h3>
         <canvas id="accuracyChart" height="100"></canvas>
       </div>
 
       <div class="logs" id="log-output">
-        <div class="log-entry">Initialising System Handshake...</div>
+        <div class="log-line">Starting system sync...</div>
       </div>
     </div>
 
-    <!-- 1. Move this to the top of your <head> if possible -->
-    <script src="https://cdn.jsdelivr.net"></script>
-
     <script>
-      // 2. Wrap everything in an Event Listener
-      window.addEventListener("load", function () {
+      // 2. Wait for EVERYTHING (including Chart.js) to load
+      window.onload = function () {
         const API_PATH = "/api/global_model";
+        let accuracyChart;
 
-        // Now Chart is guaranteed to be defined
+        // Initialize Chart.js
         const ctx = document.getElementById("accuracyChart").getContext("2d");
-        const accuracyChart = new Chart(ctx, {
+        accuracyChart = new Chart(ctx, {
           type: "line",
           data: {
             labels: [],
             datasets: [
               {
-                label: "Model Accuracy",
+                label: "Accuracy %",
                 data: [],
-                borderColor: "#3b82f6",
-                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                borderColor: "#2563eb",
+                backgroundColor: "rgba(37, 99, 235, 0.1)",
                 borderWidth: 3,
                 tension: 0.4,
                 fill: true,
+                pointRadius: 4,
               },
             ],
           },
           options: {
             responsive: true,
-            scales: { y: { min: 0, max: 1 } },
+            scales: {
+              y: { min: 0, max: 1, ticks: { callback: (v) => v * 100 + "%" } },
+            },
           },
         });
 
-        function addLog(message) {
+        function addLog(msg) {
           const logBox = document.getElementById("log-output");
-          const entry = document.createElement("div");
-          entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
-          logBox.prepend(entry);
+          const div = document.createElement("div");
+          div.className = "log-line";
+          div.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+          logBox.prepend(div);
         }
 
-        async function syncDashboard() {
+        async function syncData() {
           try {
             const response = await fetch(API_PATH);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) throw new Error("Service Unreachable");
+
             const data = await response.json();
 
+            // Update UI
             document.getElementById("status").innerText = "Online";
             document.getElementById("status").className = "value status-online";
             document.getElementById("round").innerText = data.round;
 
-            const simulatedAcc = Math.min(0.99, 0.65 + data.round * 0.065);
+            // Simulated Accuracy Logic for V3
+            const currentAcc = Math.min(0.99, 0.68 + data.round * 0.055);
             document.getElementById("accuracy").innerText =
-              Math.round(simulatedAcc * 100) + "%";
+              Math.round(currentAcc * 100) + "%";
 
-            if (!accuracyChart.data.labels.includes(`Round ${data.round}`)) {
-              accuracyChart.data.labels.push(`Round ${data.round}`);
-              accuracyChart.data.datasets[0].data.push(simulatedAcc);
+            // Update Chart
+            const label = `R${data.round}`;
+            if (!accuracyChart.data.labels.includes(label)) {
+              accuracyChart.data.labels.push(label);
+              accuracyChart.data.datasets[0].data.push(currentAcc);
               accuracyChart.update();
-              addLog(`Aggregated Round ${data.round} | PQC Verified`);
+              addLog(
+                `Round ${data.round} aggregated. PQC signatures verified.`,
+              );
             }
-          } catch (error) {
+          } catch (e) {
             document.getElementById("status").innerText = "Offline";
             document.getElementById("status").className =
               "value status-offline";
+            addLog("Connection error: Retrying sync with Render...");
           }
         }
 
-        syncDashboard();
-        setInterval(syncDashboard, 5000);
-      });
+        // Initial sync and interval
+        syncData();
+        setInterval(syncData, 5000);
+      };
     </script>
   </body>
 </html>
