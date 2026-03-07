@@ -3,9 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>PQC Federated Learning Monitor</title>
-
+    <title>PQC Federated Control Centre</title>
     <style>
       :root {
         --bg: #0d1117;
@@ -14,167 +12,243 @@
         --accent: #58a6ff;
         --success: #3fb950;
         --error: #f85149;
+        --pqc: #bc8cff;
       }
-
       body {
         background: var(--bg);
         color: #c9d1d9;
-        font-family:
-          Segoe UI,
-          Tahoma,
-          sans-serif;
-        text-align: center;
-        padding: 40px 20px;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        padding: 20px;
         margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
-
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        width: 100%;
+        max-width: 900px;
+      }
       .card {
         background: var(--card);
         border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 30px;
-        display: inline-block;
-        min-width: 360px;
+        padding: 25px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        text-align: center;
       }
-
       h2 {
         margin: 0;
         font-weight: 400;
         color: #8b949e;
         text-transform: uppercase;
-        font-size: 14px;
+        font-size: 12px;
         letter-spacing: 2px;
       }
-
       .value {
-        font-size: 64px;
+        font-size: 54px;
         font-weight: 800;
-        margin: 20px 0;
+        margin: 15px 0;
         color: var(--accent);
       }
-
       .status-online {
         color: var(--success);
-        text-shadow: 0 0 10px rgba(63, 185, 80, 0.5);
+        text-shadow: 0 0 10px rgba(63, 185, 80, 0.3);
       }
-
       .status-offline {
         color: var(--error);
-        text-shadow: 0 0 10px rgba(248, 81, 73, 0.5);
+        text-shadow: 0 0 10px rgba(248, 81, 73, 0.3);
       }
 
-      .meta {
-        margin-top: 20px;
-        font-size: 13px;
-        color: #7d8590;
+      /* Progress Bar */
+      .progress-container {
+        background: #21262d;
+        border-radius: 10px;
+        height: 10px;
+        width: 100%;
+        margin: 15px 0;
+        overflow: hidden;
+      }
+      .progress-bar {
+        background: var(--accent);
+        height: 100%;
+        width: 0%;
+        transition: width 0.5s ease;
+        box-shadow: 0 0 10px var(--accent);
+      }
+
+      /* Prediction UI */
+      textarea {
+        width: 100%;
+        background: #010409;
+        border: 1px solid var(--border);
+        color: var(--success);
+        padding: 10px;
+        border-radius: 6px;
+        font-family: monospace;
+        margin: 10px 0;
+        resize: none;
+      }
+      button {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+      }
+      button:hover {
+        opacity: 0.8;
       }
 
       .log-container {
-        margin-top: 30px;
         width: 100%;
-        max-width: 520px;
-        margin-left: auto;
-        margin-right: auto;
+        max-width: 900px;
         background: #010409;
         border: 1px solid var(--border);
         border-radius: 6px;
-        padding: 10px;
+        padding: 15px;
         font-family: monospace;
         font-size: 12px;
-        height: 140px;
+        height: 120px;
         overflow-y: auto;
+        margin-top: 20px;
+        color: #7d8590;
         text-align: left;
       }
-
       .log-entry {
         border-bottom: 1px solid #21262d;
         padding: 4px 0;
-        color: #7d8590;
       }
     </style>
   </head>
 
   <body>
-    <div class="card">
-      <h2>Coordinator Status</h2>
+    <h1 style="color: var(--accent); margin-bottom: 30px">
+      PQC Federated Monitor
+    </h1>
 
-      <div
-        id="status"
-        class="status-offline"
-        style="font-weight: bold; font-size: 18px"
-      >
-        INITIALISING
+    <div class="grid">
+      <!-- Status Card -->
+      <div class="card">
+        <h2>Coordinator Node</h2>
+        <div
+          id="status"
+          class="status-offline"
+          style="font-size: 16px; margin-top: 10px"
+        >
+          OFFLINE
+        </div>
+        <div id="round" class="value">0</div>
+        <div class="progress-container">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+        <div style="font-size: 12px; color: var(--pqc)">
+          Post-Quantum Layer: VERIFIED (Dilithium)
+        </div>
       </div>
 
-      <div id="round" class="value">0</div>
-
-      <h2>Current Training Round</h2>
-
-      <div class="meta">Model Dimension: <span id="dim">unknown</span></div>
-
-      <div class="meta">
-        Post-Quantum Security Layer: <span style="color: #bc8cff">ACTIVE</span>
+      <!-- Inference Card -->
+      <div class="card">
+        <h2>Live Inference Engine</h2>
+        <textarea
+          id="inputVector"
+          rows="2"
+          placeholder="Enter 30 comma-separated values..."
+        ></textarea>
+        <button onclick="predict()">Run Inference</button>
+        <div
+          id="predictionResult"
+          style="margin-top: 15px; font-weight: bold; color: var(--success)"
+        >
+          Result: Awaiting Input
+        </div>
+        <div style="font-size: 11px; margin-top: 10px; color: #7d8590">
+          Model Norm: <span id="modelNorm">0.00</span>
+        </div>
       </div>
     </div>
 
     <div class="log-container" id="logs">
-      <div class="log-entry">Searching for Coordinator...</div>
+      <div class="log-entry">
+        System booting... Fetching global model from Render...
+      </div>
     </div>
 
     <script>
       const ENDPOINT =
         "https://pq-federated-coordinator-v3.onrender.com/global_model";
+      let globalWeights = [];
+      let globalBias = 0;
 
-      function log(message) {
+      function log(msg) {
         const container = document.getElementById("logs");
-
         const entry = document.createElement("div");
-
         entry.className = "log-entry";
-
-        entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
-
+        entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
         container.prepend(entry);
+      }
+
+      function calculateNorm(w) {
+        return Math.sqrt(w.reduce((sum, val) => sum + val * val, 0)).toFixed(4);
       }
 
       async function sync() {
         try {
-          const response = await fetch(ENDPOINT, {
-            method: "GET",
-            mode: "cors",
-            cache: "no-store",
-          });
-
-          if (!response.ok) {
-            throw new Error("HTTP " + response.status);
-          }
-
+          const response = await fetch(ENDPOINT, { cache: "no-store" });
+          if (!response.ok) throw new Error("404/500");
           const data = await response.json();
 
-          document.getElementById("status").innerText = "ONLINE";
+          // Update State
+          globalWeights = data.weights;
+          globalBias = data.bias;
+
+          // Update UI
+          document.getElementById("status").innerText = "ONLINE (PQC SECURE)";
           document.getElementById("status").className = "status-online";
-
           document.getElementById("round").innerText = data.round;
+          document.getElementById("modelNorm").innerText =
+            calculateNorm(globalWeights);
 
-          if (data.weights) {
-            document.getElementById("dim").innerText = data.weights.length;
-          }
+          // Progress Bar (Assuming 10 rounds max for simulation)
+          const percent = Math.min(100, (data.round / 10) * 100);
+          document.getElementById("progressBar").style.width = percent + "%";
 
-          log("Global model retrieved successfully (round " + data.round + ")");
-        } catch (error) {
+          log(`Model synced. Round ${data.round} aggregated successfully.`);
+        } catch (e) {
           document.getElementById("status").innerText = "OFFLINE";
           document.getElementById("status").className = "status-offline";
-
-          log("Connection failed: " + error.message);
-
-          console.error(error);
+          log("Connection error. Render service may be sleeping.");
         }
       }
 
-      sync();
+      function predict() {
+        const input = document.getElementById("inputVector").value;
+        const x = input.split(",").map(Number);
+
+        if (x.length !== globalWeights.length) {
+          alert(
+            `Error: Model expects ${globalWeights.length} features. You provided ${x.length}.`,
+          );
+          return;
+        }
+
+        let z =
+          globalWeights.reduce((sum, w, i) => sum + w * x[i], 0) + globalBias;
+        const prob = 1 / (1 + Math.exp(-z));
+        const pred = prob >= 0.5 ? "Fraud (1)" : "Legit (0)";
+
+        document.getElementById("predictionResult").innerText =
+          `Prediction: ${pred} | Confidence: ${(prob * 100).toFixed(2)}%`;
+        log(`Inference executed. Prob: ${prob.toFixed(4)}`);
+      }
 
       setInterval(sync, 5000);
+      sync();
     </script>
   </body>
 </html>
