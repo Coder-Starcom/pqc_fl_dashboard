@@ -8,4 +8,4 @@
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, OPTION"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
