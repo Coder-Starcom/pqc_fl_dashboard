@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>PQ Federated Learning Monitor</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f5f7fa;
+        margin: 0;
+        padding: 0;
+      }
+
+      header {
+        background: #1f2937;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 1200px;
+        margin: auto;
+        margin-top: 30px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      .card h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #444;
+      }
+
+      .value {
+        font-size: 28px;
+        font-weight: bold;
+        margin-top: 10px;
+        color: #1f2937;
+      }
+
+      .status-online {
+        color: green;
+      }
+
+      .status-offline {
+        color: red;
+      }
+
+      .chart-box {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .logs {
+        background: white;
+        margin-top: 30px;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        max-height: 200px;
+        overflow: auto;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>PQC Federated Learning Monitor</h1>
+      <p>Coordinator Service Dashboard</p>
+    </header>
+
+    <div class="container">
+      <div class="cards">
+        <div class="card">
+          <h3>Coordinator Status</h3>
+          <div id="status" class="value status-offline">Offline</div>
+        </div>
+
+        <div class="card">
+          <h3>Current Round</h3>
+          <div id="round" class="value">0</div>
+        </div>
+
+        <div class="card">
+          <h3>Client Updates</h3>
+          <div id="clients" class="value">0</div>
+        </div>
+
+        <div class="card">
+          <h3>Model Accuracy</h3>
+          <div id="accuracy" class="value">0%</div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <h3>Accuracy Over Training Rounds</h3>
+        <canvas id="accuracyChart"></canvas>
+      </div>
+
+      <div class="logs">
+        <h3>System Logs</h3>
+        <div id="log-output"></div>
+      </div>
+    </div>
+
+    <script>
+      const COORDINATOR_URL = "/api";
+
+      const ctx = document.getElementById("accuracyChart").getContext("2d");
+
+      const accuracyChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: "Accuracy",
+              data: [],
+              tension: 0.2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              min: 0,
+              max: 1,
+            },
+          },
+        },
+      });
+
+      function log(message) {
+        const logBox = document.getElementById("log-output");
+
+        const line = document.createElement("div");
+
+        const time = new Date().toLocaleTimeString();
+
+        line.textContent = `[${time}] ${message}`;
+
+        logBox.appendChild(line);
+
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      async function fetchStatus() {
+        try {
+          const response = await fetch(`${COORDINATOR_URL}/round_status`);
+
+          if (!response.ok) throw new Error("Coordinator unreachable");
+
+          const data = await response.json();
+
+          document.getElementById("status").innerText = "Online";
+          document.getElementById("status").className = "value status-online";
+
+          document.getElementById("round").innerText = data.round;
+          document.getElementById("clients").innerText = data.updates_received;
+
+          log("Round status updated");
+        } catch (error) {
+          document.getElementById("status").innerText = "Offline";
+          document.getElementById("status").className = "value status-offline";
+
+          log("Coordinator offline");
+        }
+      }
+
+      async function fetchModel() {
+        try {
+          const response = await fetch(`${COORDINATOR_URL}/global_model`);
+
+          if (!response.ok) return;
+
+          const data = await response.json();
+
+          if (data.accuracy !== undefined) {
+            document.getElementById("accuracy").innerText =
+              Math.round(data.accuracy * 100) + "%";
+
+            accuracyChart.data.labels.push(data.round);
+            accuracyChart.data.datasets[0].data.push(data.accuracy);
+
+            accuracyChart.update();
+
+            log("Model accuracy updated");
+          }
+        } catch (error) {
+          log("Model fetch failed");
+        }
+      }
+
+      async function updateDashboard() {
+        await fetchStatus();
+        await fetchModel();
+      }
+
+      setInterval(updateDashboard, 5000);
+
+      updateDashboard();
+    </script>
+  </body>
+</html>
