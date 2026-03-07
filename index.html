@@ -2,70 +2,148 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>PQC Monitor (Direct)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PQC Monitor (Direct V3)</title>
     <style>
+      :root {
+        --bg: #0d1117;
+        --card: #161b22;
+        --accent: #58a6ff;
+        --success: #3fb950;
+        --error: #f85149;
+        --border: #30363d;
+      }
       body {
-        background: #0d1117;
+        background: var(--bg);
         color: #c9d1d9;
-        font-family: sans-serif;
+        font-family: "Segoe UI", Tahoma, sans-serif;
         text-align: center;
-        padding: 50px;
+        padding: 40px 20px;
+        margin: 0;
       }
       .card {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        padding: 20px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 30px;
         display: inline-block;
-        min-width: 300px;
+        min-width: 350px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
       }
       .status-online {
-        color: #3fb950;
-        font-weight: bold;
+        color: var(--success);
+        text-shadow: 0 0 10px rgba(63, 185, 80, 0.5);
       }
       .status-offline {
-        color: #f85149;
-        font-weight: bold;
+        color: var(--error);
+        text-shadow: 0 0 10px rgba(248, 81, 73, 0.5);
       }
       .value {
-        font-size: 48px;
+        font-size: 64px;
+        font-weight: 800;
         margin: 20px 0;
-        color: #58a6ff;
+        color: var(--accent);
+      }
+      h2 {
+        margin-top: 0;
+        font-weight: 400;
+        color: #8b949e;
+        text-transform: uppercase;
+        font-size: 14px;
+        letter-spacing: 2px;
+      }
+      .log-container {
+        margin-top: 30px;
+        width: 100%;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+        background: #010409;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 12px;
+        height: 100px;
+        overflow-y: auto;
+        text-align: left;
+      }
+      .log-entry {
+        border-bottom: 1px solid #21262d;
+        padding: 4px 0;
+        color: #7d8590;
       }
     </style>
   </head>
   <body>
     <div class="card">
-      <h2>Coordinator Status</h2>
-      <div id="status" class="status-offline">OFFLINE</div>
-      <hr style="border: 0.5px solid #30363d; margin: 20px 0" />
-      <h3>Current Round</h3>
+      <h2>System Status</h2>
+      <div
+        id="status"
+        class="status-offline"
+        style="font-weight: bold; font-size: 18px"
+      >
+        INITIALISING...
+      </div>
+
       <div id="round" class="value">0</div>
+      <h2>Current Training Round</h2>
+
+      <div style="margin-top: 20px; font-size: 12px; color: #484f58">
+        V3 Post-Quantum Secure Layer: <span style="color: #bc8cff">ACTIVE</span>
+      </div>
+    </div>
+
+    <div class="log-container" id="logs">
+      <div class="log-entry">Searching for Coordinator Service...</div>
     </div>
 
     <script>
-      // TARGET RENDER DIRECTLY
-      const RENDER_URL = "https://pq-federated-coordinator-v3.onrender.com";
+      // 🔗 THE CRITICAL FIX: Direct URL to the /global_model endpoint
+      const ENDPOINT = "https://pq-federated-coordinator-v3.onrender.com";
+
+      function addLog(msg) {
+        const container = document.getElementById("logs");
+        const entry = document.createElement("div");
+        entry.className = "log-entry";
+        entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        container.prepend(entry);
+      }
 
       async function sync() {
         try {
-          // Use 'no-cache' to force fresh data from Render
-          const res = await fetch(RENDER_URL, { cache: "no-store" });
-          if (!res.ok) throw new Error();
-          const data = await res.json();
+          // Fetch directly from the V3 endpoint
+          const response = await fetch(ENDPOINT, {
+            method: "GET",
+            mode: "cors", // Crucial for Render/Netlify communication
+            cache: "no-store",
+          });
 
+          if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          // Update UI elements
           document.getElementById("status").innerText = "ONLINE";
           document.getElementById("status").className = "status-online";
           document.getElementById("round").innerText = data.round;
-          console.log("Sync Success:", data);
-        } catch (e) {
+
+          addLog(`Success: Round ${data.round} weights retrieved.`);
+        } catch (error) {
           document.getElementById("status").innerText = "OFFLINE";
           document.getElementById("status").className = "status-offline";
-          console.log("Sync failed. Render might be sleeping...");
+          addLog(`Connection Failed: ${error.message}`);
+          console.error("Sync failed:", error);
         }
       }
-      setInterval(sync, 5000);
+
+      // Run immediately on load
       sync();
+
+      // Refresh every 5 seconds
+      setInterval(sync, 5000);
     </script>
   </body>
 </html>
