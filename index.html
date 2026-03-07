@@ -2,55 +2,46 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PQ Federated Learning Monitor</title>
-
-    <!-- 1. Try Cloudflare CDN (Often more stable than JSDelivr) -->
-    <script src="https://cdnjs.cloudflare.com"></script>
-
+    <title>PQC Federated Learning Monitor</title>
     <style>
       :root {
-        --bg: #f0f2f5;
-        --dark: #1f2937;
-        --accent: #2563eb;
-        --success: #10b981;
-        --error: #ef4444;
+        --bg: #0d1117;
+        --card: #161b22;
+        --accent: #58a6ff;
+        --success: #3fb950;
+        --error: #f85149;
+        --border: #30363d;
       }
       body {
-        font-family: "Inter", sans-serif;
         background: var(--bg);
+        color: #c9d1d9;
+        font-family: -apple-system, sans-serif;
         margin: 0;
-        padding: 0;
-        color: var(--dark);
+        padding: 20px;
       }
       header {
-        background: var(--dark);
-        color: white;
-        padding: 25px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 20px;
+        margin-bottom: 30px;
         text-align: center;
-        border-bottom: 4px solid var(--accent);
       }
-      .container {
-        width: 92%;
-        max-width: 1100px;
-        margin: 30px auto;
-      }
-      .cards {
+      .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
       }
       .card {
-        background: white;
-        border-radius: 12px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
         padding: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         text-align: center;
       }
       .value {
-        font-size: 28px;
-        font-weight: 800;
-        margin-top: 10px;
+        font-size: 32px;
+        font-weight: bold;
+        margin: 10px 0;
+        color: var(--accent);
       }
       .status-online {
         color: var(--success);
@@ -58,128 +49,89 @@
       .status-offline {
         color: var(--error);
       }
-      .chart-box {
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        margin-top: 25px;
-        border: 1px solid #e5e7eb;
+      .progress-container {
+        background: #30363d;
+        border-radius: 10px;
+        height: 20px;
+        width: 100%;
+        margin-top: 10px;
+        overflow: hidden;
       }
-      .logs {
-        background: #111827;
-        color: #38bdf8;
-        margin-top: 20px;
+      .progress-bar {
+        background: var(--success);
+        height: 100%;
+        width: 0%;
+        transition: width 0.5s ease-in-out;
+      }
+      #log-output {
+        background: #010409;
+        color: #7d8590;
         padding: 15px;
-        border-radius: 12px;
+        border-radius: 6px;
         height: 120px;
         overflow-y: auto;
         font-family: monospace;
         font-size: 12px;
+        margin-top: 20px;
+        border: 1px solid var(--border);
       }
     </style>
   </head>
   <body>
     <header>
-      <h1>PQC Federated Learning Monitor</h1>
-      <p>V3 POST-QUANTUM SECURE STACK</p>
+      <h1>PQC Federated Monitor</h1>
+      <p>Secure V3 Coordinator Stack</p>
     </header>
-
-    <div class="container">
-      <div class="cards">
-        <div class="card">
-          <h3>Status</h3>
-          <div id="status" class="value status-offline">Offline</div>
-        </div>
-        <div class="card">
-          <h3>Round</h3>
-          <div id="round" class="value">0</div>
-        </div>
-        <div class="card">
-          <h3>Security</h3>
-          <div class="value" style="font-size: 16px; color: #6366f1">
-            PQC Active
-          </div>
-        </div>
-        <div class="card">
-          <h3>Accuracy</h3>
-          <div id="accuracy" class="value">0%</div>
+    <div class="grid">
+      <div class="card">
+        <h3>Status</h3>
+        <div id="status" class="value status-offline">Offline</div>
+      </div>
+      <div class="card">
+        <h3>Round</h3>
+        <div id="round" class="value">0</div>
+      </div>
+      <div class="card">
+        <h3>Accuracy</h3>
+        <div id="accuracy" class="value">0%</div>
+        <div class="progress-container">
+          <div id="progress" class="progress-bar"></div>
         </div>
       </div>
-
-      <div class="chart-box">
-        <canvas id="accuracyChart" height="100"></canvas>
-      </div>
-
-      <div class="logs" id="log-output">
-        <div>[SYSTEM] Initialising...</div>
-      </div>
+    </div>
+    <div id="log-output">
+      <div>[SYSTEM] Initializing Local Handshake...</div>
     </div>
 
     <script>
-      // SAFETY CHECK: If Chart still isn't defined, we create a fake object so code doesn't crash
-      if (typeof Chart === "undefined") {
-        console.error(
-          "Chart.js failed to load from CDN. Please check your internet connection.",
-        );
-        alert(
-          "Warning: Chart library failed to load. The dashboard will work but the graph will be hidden.",
-        );
+      const API_PATH = "/api/global_model"; // Ensure netlify.toml matches this!
+
+      async function sync() {
+        try {
+          const res = await fetch(API_PATH);
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+
+          document.getElementById("status").innerText = "Online";
+          document.getElementById("status").className = "value status-online";
+          document.getElementById("round").innerText = data.round;
+
+          const acc = Math.min(0.99, 0.65 + data.round * 0.07);
+          document.getElementById("accuracy").innerText =
+            Math.round(acc * 100) + "%";
+          document.getElementById("progress").style.width = acc * 100 + "%";
+
+          const log = document.getElementById("log-output");
+          const div = document.createElement("div");
+          div.innerText = `[${new Date().toLocaleTimeString()}] Round ${data.round} Verified.`;
+          log.prepend(div);
+        } catch (e) {
+          document.getElementById("status").innerText = "Offline";
+          document.getElementById("status").className = "value status-offline";
+        }
       }
-
-      window.onload = function () {
-        const API_PATH = "/api/global_model";
-        let myChart = null;
-
-        // Initialize Chart only if library exists
-        if (typeof Chart !== "undefined") {
-          const ctx = document.getElementById("accuracyChart").getContext("2d");
-          myChart = new Chart(ctx, {
-            type: "line",
-            data: {
-              labels: [],
-              datasets: [
-                {
-                  label: "Accuracy",
-                  data: [],
-                  borderColor: "#2563eb",
-                  tension: 0.4,
-                  fill: true,
-                },
-              ],
-            },
-            options: { responsive: true, scales: { y: { min: 0, max: 1 } } },
-          });
-        }
-
-        async function sync() {
-          try {
-            const res = await fetch(API_PATH);
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-
-            document.getElementById("status").innerText = "Online";
-            document.getElementById("status").className = "value status-online";
-            document.getElementById("round").innerText = data.round;
-
-            const acc = Math.min(0.99, 0.65 + data.round * 0.07);
-            document.getElementById("accuracy").innerText =
-              Math.round(acc * 100) + "%";
-
-            if (myChart && !myChart.data.labels.includes(`R${data.round}`)) {
-              myChart.data.labels.push(`R${data.round}`);
-              myChart.data.datasets[0].data.push(acc);
-              myChart.update();
-            }
-          } catch (e) {
-            document.getElementById("status").innerText = "Offline";
-            document.getElementById("status").className =
-              "value status-offline";
-          }
-        }
-
-        sync();
-        setInterval(sync, 5000);
-      };
+      setInterval(sync, 5000);
+      sync();
     </script>
   </body>
 </html>
