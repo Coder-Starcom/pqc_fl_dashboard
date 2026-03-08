@@ -71,7 +71,7 @@ const gradChart = createChart("gradChart", "Gradient");
 
 const latChart = createChart("latChart", "Latency");
 
-const aggChart = createChart("aggChart", "Aggregation");
+const driftChart = createChart("driftChart", "Model Drift");
 
 function updateChart(chart, value) {
   chart.data.labels.push("");
@@ -138,7 +138,7 @@ async function syncMetrics() {
 
     document.getElementById("progressBar").style.width = percent + "%";
 
-    const agg = m.federated_metrics?.aggregation_time ?? 0;
+    const drift = m.federated_metrics?.convergence ?? 0;
 
     const grad = m.training_metrics?.gradient_norm ?? 0;
 
@@ -148,7 +148,7 @@ async function syncMetrics() {
 
     document.getElementById("clients").innerText = clients;
 
-    document.getElementById("aggTime").innerText = agg.toFixed(PRECISION);
+    document.getElementById("modelDrift").innerText = drift.toFixed(PRECISION);
 
     document.getElementById("gradNorm").innerText = grad.toFixed(PRECISION);
 
@@ -160,7 +160,7 @@ async function syncMetrics() {
 
     updateChart(latChart, lat);
 
-    updateChart(aggChart, agg);
+    updateChart(driftChart, drift);
   } catch {
     log("Metrics unavailable");
   }
