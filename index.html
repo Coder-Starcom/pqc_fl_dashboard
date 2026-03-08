@@ -3,199 +3,102 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>PQC Federated Control Centre</title>
-    <style>
-      :root {
-        --bg: #0d1117;
-        --card: #161b22;
-        --border: #30363d;
-        --accent: #58a6ff;
-        --success: #3fb950;
-        --error: #f85149;
-        --pqc: #bc8cff;
-      }
-      body {
-        background: var(--bg);
-        color: #c9d1d9;
-        font-family: "Segoe UI", Tahoma, sans-serif;
-        padding: 20px;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 20px;
-        width: 100%;
-        max-width: 900px;
-      }
-      .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-        text-align: center;
-      }
-      h2 {
-        margin: 0;
-        font-weight: 400;
-        color: #8b949e;
-        text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 2px;
-      }
-      .value {
-        font-size: 54px;
-        font-weight: 800;
-        margin: 15px 0;
-        color: var(--accent);
-      }
-      .status-online {
-        color: var(--success);
-        text-shadow: 0 0 10px rgba(63, 185, 80, 0.3);
-      }
-      .status-offline {
-        color: var(--error);
-        text-shadow: 0 0 10px rgba(248, 81, 73, 0.3);
-      }
 
-      /* Progress Bar */
-      .progress-container {
-        background: #21262d;
-        border-radius: 10px;
-        height: 10px;
-        width: 100%;
-        margin: 15px 0;
-        overflow: hidden;
-      }
-      .progress-bar {
-        background: var(--accent);
-        height: 100%;
-        width: 0%;
-        transition: width 0.5s ease;
-        box-shadow: 0 0 10px var(--accent);
-      }
+    <link rel="stylesheet" href="style.css" />
 
-      /* Prediction UI */
-      textarea {
-        width: 100%;
-        background: #010409;
-        border: 1px solid var(--border);
-        color: var(--success);
-        padding: 10px;
-        border-radius: 6px;
-        font-family: monospace;
-        margin: 10px 0;
-        resize: none;
-      }
-      button {
-        background: var(--accent);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        width: 100%;
-      }
-      button:hover {
-        opacity: 0.8;
-      }
-
-      .log-container {
-        width: 100%;
-        max-width: 900px;
-        background: #010409;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 15px;
-        font-family: monospace;
-        font-size: 12px;
-        height: 120px;
-        overflow-y: auto;
-        margin-top: 20px;
-        color: #7d8590;
-        text-align: left;
-      }
-      .log-entry {
-        border-bottom: 1px solid #21262d;
-        padding: 4px 0;
-      }
-    </style>
+    <!-- Chart Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
 
   <body>
-    <h1 style="color: var(--accent); margin-bottom: 30px">
-      PQC Federated Monitor
-    </h1>
+    <h1 class="title">PQC Federated Monitor</h1>
 
     <div class="grid">
-      <!-- Status Card -->
+      <!-- Coordinator Card -->
+
       <div class="card">
         <h2>Coordinator Node</h2>
-        <div
-          id="status"
-          class="status-offline"
-          style="font-size: 16px; margin-top: 10px"
-        >
-          OFFLINE
-        </div>
+
+        <div id="status" class="status-offline">OFFLINE</div>
+
         <div id="round" class="value">0</div>
+
         <div class="progress-container">
           <div id="progressBar" class="progress-bar"></div>
         </div>
-        <div style="font-size: 12px; color: var(--pqc)">
-          Post-Quantum Layer: VERIFIED (Dilithium)
-        </div>
+
+        <div class="pqc-status">Post-Quantum Layer: VERIFIED (Dilithium)</div>
       </div>
 
       <!-- Inference Card -->
+
       <div class="card">
         <h2>Live Inference Engine</h2>
+
         <textarea
           id="inputVector"
           rows="2"
           placeholder="Enter 30 comma-separated values..."
         ></textarea>
+
         <button onclick="predict()">Run Inference</button>
-        <div
-          id="predictionResult"
-          style="margin-top: 15px; font-weight: bold; color: var(--success)"
-        >
+
+        <div id="predictionResult" class="prediction">
           Result: Awaiting Input
         </div>
-        <div style="font-size: 11px; margin-top: 10px; color: #7d8590">
-          Model Norm: <span id="modelNorm">0.00</span>
+
+        <div class="model-norm">
+          Model Norm:
+          <span id="modelNorm">0.00</span>
         </div>
       </div>
+
+      <!-- Metrics Card -->
 
       <div class="card">
         <h2>Federated Metrics</h2>
 
-        <div style="font-size: 14px; margin-top: 10px">
-          Clients: <span id="clients">0</span>
-        </div>
+        <div class="metric">Clients: <span id="clients">0</span></div>
 
-        <div style="font-size: 14px">
-          Aggregation Time: <span id="aggTime">0</span>s
-        </div>
+        <div class="metric">Aggregation Time: <span id="aggTime">0</span>s</div>
 
-        <div style="font-size: 14px">
-          Gradient Norm: <span id="gradNorm">0</span>
-        </div>
+        <div class="metric">Gradient Norm: <span id="gradNorm">0</span></div>
 
-        <div style="font-size: 14px">
-          Latency: <span id="latency">0</span> ms
-        </div>
+        <div class="metric">Latency: <span id="latency">0</span> ms</div>
 
-        <div style="font-size: 14px">
+        <div class="metric">
           Update Size: <span id="updateSize">0</span> bytes
         </div>
       </div>
+
+      <!-- Gradient Graph -->
+
+      <div class="card">
+        <h2>Gradient Norm Trend</h2>
+
+        <canvas id="gradChart"></canvas>
+      </div>
+
+      <!-- Latency Graph -->
+
+      <div class="card">
+        <h2>Network Latency</h2>
+
+        <canvas id="latChart"></canvas>
+      </div>
+
+      <!-- Aggregation Graph -->
+
+      <div class="card">
+        <h2>Aggregation Time</h2>
+
+        <canvas id="aggChart"></canvas>
+      </div>
     </div>
+
+    <!-- Logs -->
 
     <div class="log-container" id="logs">
       <div class="log-entry">
@@ -203,140 +106,6 @@
       </div>
     </div>
 
-    <script>
-      const MODEL_ENDPOINT =
-        "https://pq-federated-coordinator-v3.onrender.com/global_model";
-
-      const METRICS_ENDPOINT =
-        "https://pq-federated-coordinator-v3.onrender.com/metrics";
-
-      let globalWeights = [];
-      let globalBias = 0;
-
-      function log(msg) {
-        const container = document.getElementById("logs");
-        const entry = document.createElement("div");
-        entry.className = "log-entry";
-        entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        container.prepend(entry);
-      }
-
-      function calculateNorm(w) {
-        if (!w || w.length === 0) return "0.00";
-        return Math.sqrt(w.reduce((sum, val) => sum + val * val, 0)).toFixed(4);
-      }
-
-      /* =========================
-     GLOBAL MODEL SYNC
-  ========================= */
-
-      async function syncModel() {
-        try {
-          const response = await fetch(MODEL_ENDPOINT, { cache: "no-store" });
-
-          if (!response.ok) throw new Error("Coordinator unavailable");
-
-          const data = await response.json();
-
-          if (!data.weights) return;
-
-          globalWeights = data.weights;
-          globalBias = data.bias;
-
-          document.getElementById("status").innerText = "ONLINE (PQC SECURE)";
-          document.getElementById("status").className = "status-online";
-
-          document.getElementById("round").innerText = data.round;
-
-          document.getElementById("modelNorm").innerText =
-            calculateNorm(globalWeights);
-
-          const percent = Math.min(100, (data.round / 10) * 100);
-          document.getElementById("progressBar").style.width = percent + "%";
-
-          log(`Model synced. Round ${data.round} loaded.`);
-        } catch (e) {
-          document.getElementById("status").innerText = "OFFLINE";
-          document.getElementById("status").className = "status-offline";
-
-          log("Coordinator unreachable (Render may be sleeping).");
-        }
-      }
-
-      /* =========================
-     METRICS SYNC
-  ========================= */
-
-      async function syncMetrics() {
-        try {
-          const res = await fetch(METRICS_ENDPOINT, { cache: "no-store" });
-
-          if (!res.ok) throw new Error("Metrics unavailable");
-
-          const data = await res.json();
-
-          if (!data.current_round) return;
-
-          const m = data.current_round;
-
-          document.getElementById("clients").innerText =
-            m.federated_metrics?.participating_clients ?? 0;
-
-          document.getElementById("aggTime").innerText = (
-            m.federated_metrics?.aggregation_time ?? 0
-          ).toFixed(3);
-
-          document.getElementById("gradNorm").innerText = (
-            m.training_metrics?.gradient_norm ?? 0
-          ).toFixed(3);
-
-          document.getElementById("latency").innerText = (
-            (m.system_metrics?.communication_latency ?? 0) * 1000
-          ).toFixed(2);
-
-          document.getElementById("updateSize").innerText =
-            m.system_metrics?.update_size_bytes ?? 0;
-        } catch (err) {
-          log("Metrics unavailable.");
-        }
-      }
-
-      /* =========================
-     LOCAL INFERENCE
-  ========================= */
-
-      function predict() {
-        const input = document.getElementById("inputVector").value;
-
-        const x = input.split(",").map(Number);
-
-        if (x.length !== globalWeights.length) {
-          alert(`Error: Model expects ${globalWeights.length} features.`);
-          return;
-        }
-
-        let z =
-          globalWeights.reduce((sum, w, i) => sum + w * x[i], 0) + globalBias;
-
-        const prob = 1 / (1 + Math.exp(-z));
-
-        const pred = prob >= 0.5 ? "Fraud (1)" : "Legit (0)";
-
-        document.getElementById("predictionResult").innerText =
-          `Prediction: ${pred} | Confidence: ${(prob * 100).toFixed(2)}%`;
-
-        log(`Inference executed. Prob: ${prob.toFixed(4)}`);
-      }
-
-      /* =========================
-     POLLING LOOP
-  ========================= */
-
-      setInterval(syncModel, 5000);
-      setInterval(syncMetrics, 5000);
-
-      syncModel();
-      syncMetrics();
-    </script>
+    <script src="app.js"></script>
   </body>
 </html>
