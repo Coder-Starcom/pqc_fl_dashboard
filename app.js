@@ -138,7 +138,7 @@ async function syncMetrics() {
 
     document.getElementById("progressBar").style.width = percent + "%";
 
-    const drift = m.federated_metrics?.convergence ?? 0;
+    const drift = (m.federated_metrics?.convergence ?? 0) * 1000;
 
     const grad = m.training_metrics?.gradient_norm ?? 0;
 
@@ -160,7 +160,7 @@ async function syncMetrics() {
 
     updateChart(latChart, lat);
 
-    updateChart(driftChart, drift);
+    updateChart(driftChart, Number(drift.toFixed(PRECISION)));
   } catch {
     log("Metrics unavailable");
   }
