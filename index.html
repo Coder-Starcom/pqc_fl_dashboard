@@ -171,6 +171,30 @@
           Model Norm: <span id="modelNorm">0.00</span>
         </div>
       </div>
+
+      <div class="card">
+        <h2>Federated Metrics</h2>
+
+        <div style="font-size: 14px; margin-top: 10px">
+          Clients: <span id="clients">0</span>
+        </div>
+
+        <div style="font-size: 14px">
+          Aggregation Time: <span id="aggTime">0</span>s
+        </div>
+
+        <div style="font-size: 14px">
+          Gradient Norm: <span id="gradNorm">0</span>
+        </div>
+
+        <div style="font-size: 14px">
+          Latency: <span id="latency">0</span> ms
+        </div>
+
+        <div style="font-size: 14px">
+          Update Size: <span id="updateSize">0</span> bytes
+        </div>
+      </div>
     </div>
 
     <div class="log-container" id="logs">
@@ -226,6 +250,39 @@
         }
       }
 
+      const METRICS_ENDPOINT =
+        "https://pqc-fl-dashboard.netlify.app/api/metrics";
+
+      async function syncMetrics() {
+        try {
+          const res = await fetch(METRICS_ENDPOINT, { cache: "no-store" });
+
+          const data = await res.json();
+
+          if (!data || !data.federated_metrics) return;
+
+          document.getElementById("clients").innerText =
+            data.federated_metrics.participating_clients || 0;
+
+          document.getElementById("aggTime").innerText = (
+            data.federated_metrics.aggregation_time || 0
+          ).toFixed(3);
+
+          document.getElementById("gradNorm").innerText = (
+            data.training_metrics.gradient_norm || 0
+          ).toFixed(3);
+
+          document.getElementById("latency").innerText = (
+            (data.system_metrics.communication_latency || 0) * 1000
+          ).toFixed(2);
+
+          document.getElementById("updateSize").innerText =
+            data.system_metrics.update_size_bytes || 0;
+        } catch (err) {
+          log("Metrics unavailable.");
+        }
+      }
+
       function predict() {
         const input = document.getElementById("inputVector").value;
         const x = input.split(",").map(Number);
@@ -249,6 +306,9 @@
 
       setInterval(sync, 5000);
       sync();
+
+      setInterval(syncMetrics, 5000);
+      syncMetrics();
     </script>
   </body>
 </html>
