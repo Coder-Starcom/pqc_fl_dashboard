@@ -71,7 +71,7 @@ const gradChart = createChart("gradChart", "Gradient");
 
 const latChart = createChart("latChart", "Latency");
 
-const driftChart = createChart("driftChart", "Model Drift");
+const sizeChart = createChart("sizeChart", "Update Size");
 
 function updateChart(chart, value) {
   chart.data.labels.push("");
@@ -160,7 +160,7 @@ async function syncMetrics() {
 
     updateChart(latChart, lat);
 
-    updateChart(driftChart, Number(drift.toFixed(PRECISION)));
+    updateChart(sizeChart, size);
   } catch {
     log("Metrics unavailable");
   }
