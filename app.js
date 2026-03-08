@@ -138,8 +138,6 @@ async function syncMetrics() {
 
     document.getElementById("progressBar").style.width = percent + "%";
 
-    const drift = (m.federated_metrics?.convergence ?? 0) * 1000;
-
     const grad = m.training_metrics?.gradient_norm ?? 0;
 
     const lat = (m.system_metrics?.communication_latency ?? 0) * 1000;
@@ -147,8 +145,6 @@ async function syncMetrics() {
     const size = m.system_metrics?.update_size_bytes ?? 0;
 
     document.getElementById("clients").innerText = clients;
-
-    document.getElementById("modelDrift").innerText = drift.toFixed(PRECISION);
 
     document.getElementById("gradNorm").innerText = grad.toFixed(PRECISION);
 
