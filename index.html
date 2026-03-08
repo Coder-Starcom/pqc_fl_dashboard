@@ -204,8 +204,12 @@
     </div>
 
     <script>
-      const ENDPOINT =
+      const MODEL_ENDPOINT =
         "https://pq-federated-coordinator-v3.onrender.com/global_model";
+
+      const METRICS_ENDPOINT =
+        "https://pq-federated-coordinator-v3.onrender.com/metrics";
+
       let globalWeights = [];
       let globalBias = 0;
 
@@ -218,96 +222,120 @@
       }
 
       function calculateNorm(w) {
+        if (!w || w.length === 0) return "0.00";
         return Math.sqrt(w.reduce((sum, val) => sum + val * val, 0)).toFixed(4);
       }
 
-      async function sync() {
+      /* =========================
+     GLOBAL MODEL SYNC
+  ========================= */
+
+      async function syncModel() {
         try {
-          const response = await fetch(ENDPOINT, { cache: "no-store" });
-          if (!response.ok) throw new Error("404/500");
+          const response = await fetch(MODEL_ENDPOINT, { cache: "no-store" });
+
+          if (!response.ok) throw new Error("Coordinator unavailable");
+
           const data = await response.json();
 
-          // Update State
+          if (!data.weights) return;
+
           globalWeights = data.weights;
           globalBias = data.bias;
 
-          // Update UI
           document.getElementById("status").innerText = "ONLINE (PQC SECURE)";
           document.getElementById("status").className = "status-online";
+
           document.getElementById("round").innerText = data.round;
+
           document.getElementById("modelNorm").innerText =
             calculateNorm(globalWeights);
 
-          // Progress Bar (Assuming 10 rounds max for simulation)
           const percent = Math.min(100, (data.round / 10) * 100);
           document.getElementById("progressBar").style.width = percent + "%";
 
-          log(`Model synced. Round ${data.round} aggregated successfully.`);
+          log(`Model synced. Round ${data.round} loaded.`);
         } catch (e) {
           document.getElementById("status").innerText = "OFFLINE";
           document.getElementById("status").className = "status-offline";
-          log("Connection error. Render service may be sleeping.");
+
+          log("Coordinator unreachable (Render may be sleeping).");
         }
       }
 
-      const METRICS_ENDPOINT =
-        "https://pqc-fl-dashboard.netlify.app/.netlify/functions/metrics";
+      /* =========================
+     METRICS SYNC
+  ========================= */
 
       async function syncMetrics() {
         try {
           const res = await fetch(METRICS_ENDPOINT, { cache: "no-store" });
 
+          if (!res.ok) throw new Error("Metrics unavailable");
+
           const data = await res.json();
 
-          if (!data || !data.federated_metrics) return;
+          if (!data.current_round) return;
+
+          const m = data.current_round;
 
           document.getElementById("clients").innerText =
-            data.federated_metrics.participating_clients || 0;
+            m.federated_metrics?.participating_clients ?? 0;
 
           document.getElementById("aggTime").innerText = (
-            data.federated_metrics.aggregation_time || 0
+            m.federated_metrics?.aggregation_time ?? 0
           ).toFixed(3);
 
           document.getElementById("gradNorm").innerText = (
-            data.training_metrics.gradient_norm || 0
+            m.training_metrics?.gradient_norm ?? 0
           ).toFixed(3);
 
           document.getElementById("latency").innerText = (
-            (data.system_metrics.communication_latency || 0) * 1000
+            (m.system_metrics?.communication_latency ?? 0) * 1000
           ).toFixed(2);
 
           document.getElementById("updateSize").innerText =
-            data.system_metrics.update_size_bytes || 0;
+            m.system_metrics?.update_size_bytes ?? 0;
         } catch (err) {
           log("Metrics unavailable.");
         }
       }
 
+      /* =========================
+     LOCAL INFERENCE
+  ========================= */
+
       function predict() {
         const input = document.getElementById("inputVector").value;
+
         const x = input.split(",").map(Number);
 
         if (x.length !== globalWeights.length) {
-          alert(
-            `Error: Model expects ${globalWeights.length} features. You provided ${x.length}.`,
-          );
+          alert(`Error: Model expects ${globalWeights.length} features.`);
           return;
         }
 
         let z =
           globalWeights.reduce((sum, w, i) => sum + w * x[i], 0) + globalBias;
+
         const prob = 1 / (1 + Math.exp(-z));
+
         const pred = prob >= 0.5 ? "Fraud (1)" : "Legit (0)";
 
         document.getElementById("predictionResult").innerText =
           `Prediction: ${pred} | Confidence: ${(prob * 100).toFixed(2)}%`;
+
         log(`Inference executed. Prob: ${prob.toFixed(4)}`);
       }
 
-      setInterval(sync, 5000);
-      sync();
+      /* =========================
+     POLLING LOOP
+  ========================= */
 
+      setInterval(syncModel, 5000);
       setInterval(syncMetrics, 5000);
+
+      syncModel();
       syncMetrics();
     </script>
   </body>
