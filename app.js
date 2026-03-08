@@ -7,6 +7,8 @@ const METRICS_ENDPOINT =
 let globalWeights = [];
 let globalBias = 0;
 
+const EXPECTED_CLIENTS = 2;
+
 /* ---------------- LOGGING ---------------- */
 
 function log(msg) {
@@ -105,10 +107,6 @@ async function syncModel() {
     document.getElementById("modelNorm").innerText =
       calculateNorm(globalWeights);
 
-    const percent = Math.min(100, (data.round / 10) * 100);
-
-    document.getElementById("progressBar").style.width = percent + "%";
-
     log(`Model synced. Round ${data.round}`);
   } catch (e) {
     document.getElementById("status").innerText = "OFFLINE";
@@ -120,7 +118,6 @@ async function syncModel() {
 }
 
 /* ---------------- METRICS SYNC ---------------- */
-
 async function syncMetrics() {
   try {
     const res = await fetch(METRICS_ENDPOINT, { cache: "no-store" });
@@ -134,6 +131,9 @@ async function syncMetrics() {
     const m = data.current_round;
 
     const clients = m.federated_metrics?.participating_clients ?? 0;
+    const percent = Math.min(100, (clients / EXPECTED_CLIENTS) * 100);
+
+    document.getElementById("progressBar").style.width = percent + "%";
 
     const agg = m.federated_metrics?.aggregation_time ?? 0;
 
