@@ -8,6 +8,7 @@ let globalWeights = [];
 let globalBias = 0;
 
 const EXPECTED_CLIENTS = 2;
+const PRECISION = 6;
 
 /* ---------------- LOGGING ---------------- */
 
@@ -28,7 +29,9 @@ function log(msg) {
 function calculateNorm(w) {
   if (!w || w.length === 0) return "0.00";
 
-  return Math.sqrt(w.reduce((sum, val) => sum + val * val, 0)).toFixed(4);
+  return Math.sqrt(w.reduce((sum, val) => sum + val * val, 0)).toFixed(
+    PRECISION,
+  );
 }
 
 /* ---------------- CHARTS ---------------- */
@@ -145,11 +148,11 @@ async function syncMetrics() {
 
     document.getElementById("clients").innerText = clients;
 
-    document.getElementById("aggTime").innerText = agg.toFixed(3);
+    document.getElementById("aggTime").innerText = agg.toFixed(PRECISION);
 
-    document.getElementById("gradNorm").innerText = grad.toFixed(3);
+    document.getElementById("gradNorm").innerText = grad.toFixed(PRECISION);
 
-    document.getElementById("latency").innerText = lat.toFixed(2);
+    document.getElementById("latency").innerText = lat.toFixed(PRECISION);
 
     document.getElementById("updateSize").innerText = size;
 
@@ -185,7 +188,7 @@ function predict() {
   document.getElementById("predictionResult").innerText =
     `Prediction: ${pred} | Confidence ${(prob * 100).toFixed(2)}%`;
 
-  log(`Inference executed. Prob ${prob.toFixed(4)}`);
+  log(`Inference executed. Prob ${prob.toFixed(PRECISION)}`);
 }
 
 /* ---------------- POLLING ---------------- */
