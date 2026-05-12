@@ -1,14 +1,16 @@
-const MODEL_ENDPOINT =
-  "https://pq-federated-coordinator-v3.onrender.com/global_model";
-
-const METRICS_ENDPOINT =
-  "https://pq-federated-coordinator-v3.onrender.com/metrics";
+const API_BASE_URL = window.__API_BASE_URL__ || "http://127.0.0.1:8000";
+const MODEL_ENDPOINT = `${API_BASE_URL}/global_model`;
+const METRICS_ENDPOINT = `${API_BASE_URL}/metrics`;
+const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
 
 let globalWeights = [];
 let globalBias = 0;
+let globalCiphertext = { u: [], v: [] };
+let ciphertextTupleBytes = 0;
 
 const EXPECTED_CLIENTS = 2;
 const PRECISION = 6;
+const HIGH_ENTROPY_THRESHOLD = 6.5;
 
 /* ---------------- LOGGING ---------------- */
 
@@ -32,6 +34,55 @@ function calculateNorm(w) {
   return Math.sqrt(w.reduce((sum, val) => sum + val * val, 0)).toFixed(
     PRECISION,
   );
+}
+
+function setLocalModelParameters(weights, bias) {
+  globalWeights = Array.isArray(weights) ? weights.slice() : [];
+  globalBias = Number(bias) || 0;
+  document.getElementById("modelNorm").innerText = calculateNorm(globalWeights);
+}
+
+function loadLocalDecryptedModel() {
+  try {
+    const fromWindow = window.localDecryptedModel;
+    if (fromWindow && Array.isArray(fromWindow.weights)) {
+      setLocalModelParameters(fromWindow.weights, fromWindow.bias);
+      return true;
+    }
+
+    const stored = window.localStorage.getItem("rlweDecryptedModel");
+    if (!stored) return false;
+
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed.weights)) return false;
+
+    setLocalModelParameters(parsed.weights, parsed.bias);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function persistCiphertext(ciphertext) {
+  globalCiphertext = {
+    u: Array.isArray(ciphertext?.u) ? ciphertext.u.slice() : [],
+    v: Array.isArray(ciphertext?.v) ? ciphertext.v.slice() : [],
+  };
+
+  ciphertextTupleBytes =
+    (globalCiphertext.u.length + globalCiphertext.v.length) * 8;
+}
+
+function getLatestMetricsSnapshot(data) {
+  if (Array.isArray(data?.history) && data.history.length > 0) {
+    return data.history[data.history.length - 1];
+  }
+
+  if (data?.current_round && typeof data.current_round === "object") {
+    return data.current_round;
+  }
+
+  return null;
 }
 
 /* ---------------- CHARTS ---------------- */
@@ -96,21 +147,29 @@ async function syncModel() {
 
     const data = await response.json();
 
-    if (!data.weights) return;
+    const ciphertext = data.ciphertext
+      ? data.ciphertext
+      : { u: data.ciphertext_u || [], v: data.ciphertext_v || [] };
 
-    globalWeights = data.weights;
-    globalBias = data.bias;
+    persistCiphertext(ciphertext);
 
-    document.getElementById("status").innerText = "ONLINE (PQC SECURE)";
+    if (Array.isArray(data.decrypted_weights)) {
+      setLocalModelParameters(data.decrypted_weights, data.decrypted_bias ?? 0);
+    } else if (!loadLocalDecryptedModel()) {
+      document.getElementById("modelNorm").innerText =
+        "Awaiting local decryption";
+    }
+
+    document.getElementById("status").innerText = "ONLINE (BLIND AGGREGATOR)";
 
     document.getElementById("status").className = "status-online";
 
     document.getElementById("round").innerText = data.round;
 
-    document.getElementById("modelNorm").innerText =
-      calculateNorm(globalWeights);
+    document.getElementById("ciphertextSize").innerText =
+      `${ciphertextTupleBytes}`;
 
-    log(`Model synced. Round ${data.round}`);
+    log(`Model synced. Round ${data.round} | ciphertext tuple received`);
   } catch (e) {
     document.getElementById("status").innerText = "OFFLINE";
 
@@ -129,26 +188,35 @@ async function syncMetrics() {
 
     const data = await res.json();
 
-    if (!data.current_round) return;
+    const m = getLatestMetricsSnapshot(data);
+    if (!m) return;
 
-    const m = data.current_round;
-
-    const clients = m.federated_metrics?.participating_clients ?? 0;
+    const clients =
+      m.client_count ??
+      m.federated_metrics?.participating_clients ??
+      data.expected_clients ??
+      0;
     const percent = Math.min(100, (clients / EXPECTED_CLIENTS) * 100);
 
     document.getElementById("progressBar").style.width = percent + "%";
 
-    const grad = m.training_metrics?.gradient_norm ?? 0;
-
-    const lat = (m.system_metrics?.communication_latency ?? 0) * 1000;
-
-    const size = m.system_metrics?.update_size_bytes ?? 0;
+    const grad = m.gradient_norm ?? m.training_metrics?.gradient_norm ?? 0;
+    const lat =
+      m.aggregation_ms ??
+      m.mean_ring_encryption_ms ??
+      m.system_metrics?.communication_latency ??
+      0;
+    const size =
+      m.update_size_bytes ??
+      m.system_metrics?.update_size_bytes ??
+      ciphertextTupleBytes;
 
     document.getElementById("clients").innerText = clients;
 
     document.getElementById("gradNorm").innerText = grad.toFixed(PRECISION);
 
-    document.getElementById("latency").innerText = lat.toFixed(PRECISION);
+    document.getElementById("latency").innerText =
+      Number(lat).toFixed(PRECISION);
 
     document.getElementById("updateSize").innerText = size;
 
@@ -159,6 +227,39 @@ async function syncMetrics() {
     updateChart(sizeChart, size);
   } catch {
     log("Metrics unavailable");
+  }
+}
+
+/* ---------------- BLINDNESS VERIFY ---------------- */
+async function syncBlindness() {
+  try {
+    const response = await fetch(BLINDNESS_ENDPOINT, { cache: "no-store" });
+
+    if (!response.ok) throw new Error("Blindness endpoint unavailable");
+
+    const data = await response.json();
+    const entropy = Number(data.entropy_bits ?? 0);
+    const variance = Number(data.variance ?? 0);
+    const state =
+      entropy >= HIGH_ENTROPY_THRESHOLD
+        ? "CRYPTOGRAPHICALLY BLIND"
+        : "UNDER REVIEW";
+
+    const label = document.getElementById("blindnessStatus");
+    label.innerText = `Aggregator State: ${state}`;
+    label.className =
+      entropy >= HIGH_ENTROPY_THRESHOLD ? "blindness-ok" : "blindness-warn";
+
+    document.getElementById("blindnessEntropy").innerText =
+      entropy.toFixed(PRECISION);
+    document.getElementById("blindnessVariance").innerText =
+      variance.toFixed(PRECISION);
+
+    log(`Blindness verified. Entropy ${entropy.toFixed(PRECISION)}`);
+  } catch {
+    const label = document.getElementById("blindnessStatus");
+    label.innerText = "Aggregator State: VERIFICATION UNAVAILABLE";
+    label.className = "blindness-warn";
   }
 }
 
@@ -193,5 +294,8 @@ setInterval(syncModel, 5000);
 
 setInterval(syncMetrics, 5000);
 
+setInterval(syncBlindness, 7000);
+
 syncModel();
 syncMetrics();
+syncBlindness();
