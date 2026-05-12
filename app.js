@@ -8,6 +8,9 @@ const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
 const STATUS_ENDPOINT = `${API_BASE_URL}/status`;
 const API_AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
 
+console.info("Dashboard origin:", window.location.origin || "null");
+console.info("Coordinator API:", API_BASE_URL);
+
 let globalCiphertext = { u: [], v: [] };
 let ciphertextTupleBytes = 0;
 let coordinatorHealthy = false;
@@ -194,7 +197,7 @@ async function syncModel() {
     );
     modelFailures = 0;
   } catch (e) {
-    console.warn("syncModel failed", e);
+    console.warn("syncModel failed", e, "origin=", window.location.origin || "null");
     modelFailures += 1;
     if (healthFailures < 3) {
       setCoordinatorStatus("BOOTING", "status-booting");
@@ -253,7 +256,7 @@ async function syncMetrics() {
     updateChart(sizeChart, size);
     metricsFailures = 0;
   } catch (e) {
-    console.warn("syncMetrics failed", e);
+    console.warn("syncMetrics failed", e, "origin=", window.location.origin || "null");
     metricsFailures += 1;
     if (metricsFailures === 1 && !coordinatorHealthy) {
       logOnce(warningKey("Metrics unavailable"), "Metrics unavailable", "warning");
@@ -287,7 +290,7 @@ async function syncBlindness() {
     log(`Blindness verification status: ${state}`);
     blindnessFailures = 0;
   } catch (e) {
-    console.warn("syncBlindness failed", e);
+    console.warn("syncBlindness failed", e, "origin=", window.location.origin || "null");
     blindnessFailures += 1;
     const label = document.getElementById("blindnessStatus");
     label.innerText = blindnessFailures < 3
@@ -326,7 +329,7 @@ async function syncHealth() {
       log("Coordinator health check passed");
     }
   } catch (e) {
-    console.warn("syncHealth failed", e);
+    console.warn("syncHealth failed", e, "origin=", window.location.origin || "null");
     healthFailures += 1;
     coordinatorHealthy = false;
     if (healthFailures < 3) {
