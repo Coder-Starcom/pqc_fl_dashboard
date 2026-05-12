@@ -6,8 +6,6 @@ const METRICS_ENDPOINT = `${API_BASE_URL}/metrics`;
 const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
 const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
 
-let globalWeights = [];
-let globalBias = 0;
 let globalCiphertext = { u: [], v: [] };
 let ciphertextTupleBytes = 0;
 let coordinatorHealthy = false;
@@ -43,43 +41,6 @@ function clearTransientWarnings() {
         entry.remove();
       }
     });
-}
-
-/* ---------------- MODEL NORM ---------------- */
-
-function calculateNorm(w) {
-  if (!w || w.length === 0) return "0.00";
-
-  return Math.sqrt(w.reduce((sum, val) => sum + val * val, 0)).toFixed(
-    PRECISION,
-  );
-}
-
-function setLocalModelParameters(weights, bias) {
-  globalWeights = Array.isArray(weights) ? weights.slice() : [];
-  globalBias = Number(bias) || 0;
-  document.getElementById("modelNorm").innerText = calculateNorm(globalWeights);
-}
-
-function loadLocalDecryptedModel() {
-  try {
-    const fromWindow = window.localDecryptedModel;
-    if (fromWindow && Array.isArray(fromWindow.weights)) {
-      setLocalModelParameters(fromWindow.weights, fromWindow.bias);
-      return true;
-    }
-
-    const stored = window.localStorage.getItem("rlweDecryptedModel");
-    if (!stored) return false;
-
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed.weights)) return false;
-
-    setLocalModelParameters(parsed.weights, parsed.bias);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function persistCiphertext(ciphertext) {
@@ -178,13 +139,6 @@ async function syncModel() {
 
     persistCiphertext(ciphertext);
 
-    if (Array.isArray(data.decrypted_weights)) {
-      setLocalModelParameters(data.decrypted_weights, data.decrypted_bias ?? 0);
-    } else if (!loadLocalDecryptedModel()) {
-      document.getElementById("modelNorm").innerText =
-        "Awaiting local decryption";
-    }
-
     document.getElementById("status").innerText = "ONLINE (BLIND AGGREGATOR)";
 
     document.getElementById("status").className = "status-online";
@@ -194,7 +148,9 @@ async function syncModel() {
     document.getElementById("ciphertextSize").innerText =
       `${ciphertextTupleBytes}`;
 
-    log(`Model synced. Round ${data.round} | ciphertext tuple received`);
+    log(
+      `Encrypted payload received. Round ${data.round} | ciphertext tuple updated`,
+    );
   } catch (e) {
     document.getElementById("status").innerText = "OFFLINE";
 
@@ -309,31 +265,6 @@ async function syncHealth() {
   } catch {
     coordinatorHealthy = false;
   }
-}
-
-/* ---------------- INFERENCE ---------------- */
-
-function predict() {
-  const input = document.getElementById("inputVector").value;
-
-  const x = input.split(",").map(Number);
-
-  if (x.length !== globalWeights.length) {
-    alert(`Model expects ${globalWeights.length} features`);
-
-    return;
-  }
-
-  let z = globalWeights.reduce((sum, w, i) => sum + w * x[i], 0) + globalBias;
-
-  const prob = 1 / (1 + Math.exp(-z));
-
-  const pred = prob >= 0.5 ? "Fraud (1)" : "Legit (0)";
-
-  document.getElementById("predictionResult").innerText =
-    `Prediction: ${pred} | Confidence ${(prob * 100).toFixed(2)}%`;
-
-  log(`Inference executed. Prob ${prob.toFixed(PRECISION)}`);
 }
 
 /* ---------------- POLLING ---------------- */
