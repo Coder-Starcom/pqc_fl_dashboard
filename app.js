@@ -2,26 +2,17 @@ const API_BASE_URL =
   window.__API_BASE_URL__ ||
   "https://pq-federated-coordinator-v3.onrender.com";
 const MODEL_ENDPOINT = `${API_BASE_URL}/global_model`;
-const METRICS_ENDPOINT = `${API_BASE_URL}/metrics`;
 const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
 const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
 const STATUS_ENDPOINT = `${API_BASE_URL}/status`;
-const API_AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
 
 console.info("Dashboard origin:", window.location.origin || "null");
 console.info("Coordinator API:", API_BASE_URL);
 
-let globalCiphertext = { u: [], v: [] };
-let ciphertextTupleBytes = 0;
 let coordinatorHealthy = false;
 let healthFailures = 0;
 let modelFailures = 0;
-let metricsFailures = 0;
 let blindnessFailures = 0;
-
-const EXPECTED_CLIENTS = 2;
-const PRECISION = 6;
-const HIGH_ENTROPY_THRESHOLD = 6.5;
 
 function setCoordinatorStatus(text, className) {
   const el = document.getElementById("status");
@@ -30,14 +21,8 @@ function setCoordinatorStatus(text, className) {
 }
 
 function buildRequestOptions() {
-  const headers = {};
-  if (API_AUTH_TOKEN) {
-    headers["X-Client-Token"] = API_AUTH_TOKEN;
-  }
-
   return {
     cache: "no-store",
-    headers,
   };
 }
 
@@ -65,10 +50,7 @@ function clearTransientWarnings() {
     .querySelectorAll('.log-entry[data-kind="warning"]')
     .forEach((entry) => {
       const text = entry.textContent || "";
-      if (
-        text.includes("Coordinator unreachable") ||
-        text.includes("Metrics unavailable")
-      ) {
+      if (text.includes("Coordinator unreachable")) {
         entry.remove();
       }
     });
@@ -89,84 +71,6 @@ function logOnce(key, msg, kind = "info") {
   container.prepend(entry);
 }
 
-function persistCiphertext(ciphertext) {
-  globalCiphertext = {
-    u: Array.isArray(ciphertext?.u) ? ciphertext.u.slice() : [],
-    v: Array.isArray(ciphertext?.v) ? ciphertext.v.slice() : [],
-  };
-
-  ciphertextTupleBytes =
-    (globalCiphertext.u.length + globalCiphertext.v.length) * 8;
-}
-
-function getLatestMetricsSnapshot(data) {
-  if (Array.isArray(data?.history) && data.history.length > 0) {
-    return data.history[data.history.length - 1];
-  }
-
-  if (data?.current_round && typeof data.current_round === "object") {
-    return data.current_round;
-  }
-
-  return null;
-}
-
-/* ---------------- CHARTS ---------------- */
-
-function createChart(id, label) {
-  const ctx = document.getElementById(id).getContext("2d");
-
-  return new Chart(ctx, {
-    type: "line",
-
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: label,
-          data: [],
-          borderColor: "#58a6ff",
-          backgroundColor: "rgba(88,166,255,0.1)",
-          tension: 0.3,
-        },
-      ],
-    },
-
-    options: {
-      responsive: true,
-      animation: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { display: false },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            color: "#8b949e",
-            callback: (value) => Number(value).toFixed(3),
-          },
-        },
-      },
-    },
-  });
-}
-
-const latChart = createChart("latChart", "Latency");
-
-const sizeChart = createChart("sizeChart", "Update Size");
-
-function updateChart(chart, value) {
-  chart.data.labels.push("");
-
-  chart.data.datasets[0].data.push(value);
-
-  if (chart.data.labels.length > 20) {
-    chart.data.labels.shift();
-    chart.data.datasets[0].data.shift();
-  }
-
-  chart.update();
-}
-
 /* ---------------- MODEL SYNC ---------------- */
 
 async function syncModel() {
@@ -179,21 +83,12 @@ async function syncModel() {
 
     const data = await response.json();
 
-    const ciphertext = data.ciphertext
-      ? data.ciphertext
-      : { u: data.ciphertext_u || [], v: data.ciphertext_v || [] };
-
-    persistCiphertext(ciphertext);
-
     setCoordinatorStatus("ONLINE (BLIND AGGREGATOR)", "status-online");
 
     document.getElementById("round").innerText = data.round;
 
-    document.getElementById("ciphertextSize").innerText =
-      `${ciphertextTupleBytes}`;
-
     log(
-      `Encrypted payload received. Round ${data.round} | ciphertext tuple updated`,
+      `Encrypted payload received. Round ${data.round} is available.`,
     );
     modelFailures = 0;
   } catch (e) {
@@ -207,59 +102,6 @@ async function syncModel() {
 
     if (modelFailures === 1) {
       logOnce(warningKey("Coordinator unreachable"), "Coordinator unreachable", "warning");
-    }
-  }
-}
-
-/* ---------------- METRICS SYNC ---------------- */
-async function syncMetrics() {
-  try {
-    const res = await fetch(METRICS_ENDPOINT, {
-      ...buildRequestOptions(),
-    });
-
-    if (!res.ok) throw new Error();
-
-    const data = await res.json();
-
-    const m = getLatestMetricsSnapshot(data);
-    if (!m) return;
-
-    const clients =
-      m.client_count ??
-      m.federated_metrics?.participating_clients ??
-      data.expected_clients ??
-      0;
-    const percent = Math.min(100, (clients / EXPECTED_CLIENTS) * 100);
-
-    document.getElementById("progressBar").style.width = percent + "%";
-
-    const lat =
-      m.aggregation_ms ??
-      m.mean_ring_encryption_ms ??
-      m.system_metrics?.communication_latency ??
-      0;
-    const size =
-      m.update_size_bytes ??
-      m.system_metrics?.update_size_bytes ??
-      ciphertextTupleBytes;
-
-    document.getElementById("clients").innerText = clients;
-
-    document.getElementById("latency").innerText =
-      Number(lat).toFixed(PRECISION);
-
-    document.getElementById("updateSize").innerText = size;
-
-    updateChart(latChart, lat);
-
-    updateChart(sizeChart, size);
-    metricsFailures = 0;
-  } catch (e) {
-    console.warn("syncMetrics failed", e, "origin=", window.location.origin || "null");
-    metricsFailures += 1;
-    if (metricsFailures === 1 && !coordinatorHealthy) {
-      logOnce(warningKey("Metrics unavailable"), "Metrics unavailable", "warning");
     }
   }
 }
@@ -344,13 +186,10 @@ async function syncHealth() {
 
 setInterval(syncModel, 5000);
 
-setInterval(syncMetrics, 5000);
-
 setInterval(syncBlindness, 7000);
 
 setInterval(syncHealth, 4000);
 
 syncModel();
-syncMetrics();
 syncBlindness();
 syncHealth();
