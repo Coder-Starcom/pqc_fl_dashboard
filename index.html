@@ -22,7 +22,7 @@
       <div class="card">
         <h2>Coordinator Node</h2>
 
-        <div id="status" class="status-offline">OFFLINE</div>
+        <div id="status" class="status-booting">BOOTING</div>
 
         <div id="round" class="value">0</div>
 
@@ -39,7 +39,7 @@
         <h2>Blindness Verification</h2>
 
         <div id="blindnessStatus" class="blindness-warn">
-          Aggregator State: VERIFICATION UNAVAILABLE
+          Aggregator State: INITIALIZING
         </div>
 
         <div class="metric">
@@ -98,11 +98,11 @@
 
     <!-- Logs -->
 
-    <div class="log-container" id="logs">
-      <div class="log-entry">
-        System booting... Fetching global model from Render...
+      <div class="log-container" id="logs">
+        <div class="log-entry">
+          System booting... Fetching global model from Render...
+        </div>
       </div>
-    </div>
 
     <script src="app.js"></script>
   </body>

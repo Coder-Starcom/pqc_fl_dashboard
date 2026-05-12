@@ -1,18 +1,42 @@
 const API_BASE_URL =
   window.__API_BASE_URL__ ||
   "https://pq-federated-coordinator-v3.onrender.com";
+const API_AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
 const MODEL_ENDPOINT = `${API_BASE_URL}/global_model`;
 const METRICS_ENDPOINT = `${API_BASE_URL}/metrics`;
 const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
 const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
+const STATUS_ENDPOINT = `${API_BASE_URL}/status`;
 
 let globalCiphertext = { u: [], v: [] };
 let ciphertextTupleBytes = 0;
 let coordinatorHealthy = false;
+let healthFailures = 0;
+let modelFailures = 0;
+let metricsFailures = 0;
+let blindnessFailures = 0;
 
 const EXPECTED_CLIENTS = 2;
 const PRECISION = 6;
 const HIGH_ENTROPY_THRESHOLD = 6.5;
+
+function requestHeaders() {
+  const headers = {};
+  if (API_AUTH_TOKEN) {
+    headers["X-Client-Token"] = API_AUTH_TOKEN;
+  }
+  return headers;
+}
+
+function setCoordinatorStatus(text, className) {
+  const el = document.getElementById("status");
+  el.innerText = text;
+  el.className = className;
+}
+
+function warningKey(text) {
+  return text;
+}
 
 /* ---------------- LOGGING ---------------- */
 
@@ -41,6 +65,21 @@ function clearTransientWarnings() {
         entry.remove();
       }
     });
+}
+
+function logOnce(key, msg, kind = "info") {
+  const existing = Array.from(document.querySelectorAll(".log-entry")).some(
+    (entry) => entry.dataset.logKey === key,
+  );
+  if (existing) return;
+
+  const container = document.getElementById("logs");
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  entry.dataset.kind = kind;
+  entry.dataset.logKey = key;
+  entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  container.prepend(entry);
 }
 
 function persistCiphertext(ciphertext) {
@@ -127,9 +166,12 @@ function updateChart(chart, value) {
 
 async function syncModel() {
   try {
-    const response = await fetch(MODEL_ENDPOINT, { cache: "no-store" });
+    const response = await fetch(MODEL_ENDPOINT, {
+      cache: "no-store",
+      headers: requestHeaders(),
+    });
 
-    if (!response.ok) throw new Error("Coordinator offline");
+    if (!response.ok) throw new Error(`Coordinator offline (${response.status})`);
 
     const data = await response.json();
 
@@ -139,9 +181,7 @@ async function syncModel() {
 
     persistCiphertext(ciphertext);
 
-    document.getElementById("status").innerText = "ONLINE (BLIND AGGREGATOR)";
-
-    document.getElementById("status").className = "status-online";
+    setCoordinatorStatus("ONLINE (BLIND AGGREGATOR)", "status-online");
 
     document.getElementById("round").innerText = data.round;
 
@@ -151,13 +191,17 @@ async function syncModel() {
     log(
       `Encrypted payload received. Round ${data.round} | ciphertext tuple updated`,
     );
+    modelFailures = 0;
   } catch (e) {
-    document.getElementById("status").innerText = "OFFLINE";
+    modelFailures += 1;
+    if (healthFailures < 3) {
+      setCoordinatorStatus("BOOTING", "status-booting");
+    } else {
+      setCoordinatorStatus("OFFLINE", "status-offline");
+    }
 
-    document.getElementById("status").className = "status-offline";
-
-    if (!coordinatorHealthy) {
-      log("Coordinator unreachable", "warning");
+    if (modelFailures === 1) {
+      logOnce(warningKey("Coordinator unreachable"), "Coordinator unreachable", "warning");
     }
   }
 }
@@ -165,7 +209,10 @@ async function syncModel() {
 /* ---------------- METRICS SYNC ---------------- */
 async function syncMetrics() {
   try {
-    const res = await fetch(METRICS_ENDPOINT, { cache: "no-store" });
+    const res = await fetch(METRICS_ENDPOINT, {
+      cache: "no-store",
+      headers: requestHeaders(),
+    });
 
     if (!res.ok) throw new Error();
 
@@ -208,9 +255,11 @@ async function syncMetrics() {
     updateChart(latChart, lat);
 
     updateChart(sizeChart, size);
+    metricsFailures = 0;
   } catch {
-    if (!coordinatorHealthy) {
-      log("Metrics unavailable", "warning");
+    metricsFailures += 1;
+    if (metricsFailures === 1 && !coordinatorHealthy) {
+      logOnce(warningKey("Metrics unavailable"), "Metrics unavailable", "warning");
     }
   }
 }
@@ -218,7 +267,10 @@ async function syncMetrics() {
 /* ---------------- BLINDNESS VERIFY ---------------- */
 async function syncBlindness() {
   try {
-    const response = await fetch(BLINDNESS_ENDPOINT, { cache: "no-store" });
+    const response = await fetch(BLINDNESS_ENDPOINT, {
+      cache: "no-store",
+      headers: requestHeaders(),
+    });
 
     if (!response.ok) throw new Error("Blindness endpoint unavailable");
 
@@ -241,9 +293,13 @@ async function syncBlindness() {
       variance.toFixed(PRECISION);
 
     log(`Blindness verified. Entropy ${entropy.toFixed(PRECISION)}`);
+    blindnessFailures = 0;
   } catch {
+    blindnessFailures += 1;
     const label = document.getElementById("blindnessStatus");
-    label.innerText = "Aggregator State: VERIFICATION UNAVAILABLE";
+    label.innerText = blindnessFailures < 3
+      ? "Aggregator State: INITIALIZING"
+      : "Aggregator State: VERIFICATION UNAVAILABLE";
     label.className = "blindness-warn";
   }
 }
@@ -251,19 +307,41 @@ async function syncBlindness() {
 /* ---------------- HEALTH SYNC ---------------- */
 async function syncHealth() {
   try {
-    const response = await fetch(HEALTH_ENDPOINT, { cache: "no-store" });
+    let response = await fetch(STATUS_ENDPOINT, {
+      cache: "no-store",
+      headers: requestHeaders(),
+    });
+
+    if (!response.ok) {
+      response = await fetch(HEALTH_ENDPOINT, {
+        cache: "no-store",
+        headers: requestHeaders(),
+      });
+    }
 
     if (!response.ok) throw new Error("Health check failed");
 
-    if (!coordinatorHealthy) {
-      coordinatorHealthy = true;
+    const data = await response.json();
+    coordinatorHealthy = true;
+    healthFailures = 0;
+
+    if (data?.status === "ok") {
       clearTransientWarnings();
-      document.getElementById("status").innerText = "ONLINE (BLIND AGGREGATOR)";
-      document.getElementById("status").className = "status-online";
+      if (data.has_aggregate_ciphertext) {
+        setCoordinatorStatus("ONLINE (BLIND AGGREGATOR)", "status-online");
+      } else {
+        setCoordinatorStatus("ONLINE (BOOTING)", "status-booting");
+      }
       log("Coordinator health check passed");
     }
   } catch {
+    healthFailures += 1;
     coordinatorHealthy = false;
+    if (healthFailures < 3) {
+      setCoordinatorStatus("BOOTING", "status-booting");
+    } else {
+      setCoordinatorStatus("OFFLINE", "status-offline");
+    }
   }
 }
 
