@@ -10,6 +10,7 @@
 
     <!-- Chart Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
   </head>
 
   <body>
@@ -53,7 +54,11 @@
       <!-- Inference Card -->
 
       <div class="card">
-        <h2>Live Inference Engine</h2>
+        <h2>Local Inference Engine</h2>
+
+        <div class="metric subtle">
+          Uses locally decrypted global model parameters.
+        </div>
 
         <textarea
           id="inputVector"

@@ -1,12 +1,16 @@
-const API_BASE_URL = window.__API_BASE_URL__ || "http://127.0.0.1:8000";
+const API_BASE_URL =
+  window.__API_BASE_URL__ ||
+  "https://pq-federated-coordinator-v3.onrender.com";
 const MODEL_ENDPOINT = `${API_BASE_URL}/global_model`;
 const METRICS_ENDPOINT = `${API_BASE_URL}/metrics`;
 const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
+const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
 
 let globalWeights = [];
 let globalBias = 0;
 let globalCiphertext = { u: [], v: [] };
 let ciphertextTupleBytes = 0;
+let coordinatorHealthy = false;
 
 const EXPECTED_CLIENTS = 2;
 const PRECISION = 6;
@@ -14,16 +18,31 @@ const HIGH_ENTROPY_THRESHOLD = 6.5;
 
 /* ---------------- LOGGING ---------------- */
 
-function log(msg) {
+function log(msg, kind = "info") {
   const container = document.getElementById("logs");
 
   const entry = document.createElement("div");
 
   entry.className = "log-entry";
+  entry.dataset.kind = kind;
 
   entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
 
   container.prepend(entry);
+}
+
+function clearTransientWarnings() {
+  document
+    .querySelectorAll('.log-entry[data-kind="warning"]')
+    .forEach((entry) => {
+      const text = entry.textContent || "";
+      if (
+        text.includes("Coordinator unreachable") ||
+        text.includes("Metrics unavailable")
+      ) {
+        entry.remove();
+      }
+    });
 }
 
 /* ---------------- MODEL NORM ---------------- */
@@ -112,7 +131,13 @@ function createChart(id, label) {
       plugins: { legend: { display: false } },
       scales: {
         x: { display: false },
-        y: { ticks: { color: "#8b949e" } },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: "#8b949e",
+            callback: (value) => Number(value).toFixed(3),
+          },
+        },
       },
     },
   });
@@ -175,7 +200,9 @@ async function syncModel() {
 
     document.getElementById("status").className = "status-offline";
 
-    log("Coordinator unreachable");
+    if (!coordinatorHealthy) {
+      log("Coordinator unreachable", "warning");
+    }
   }
 }
 
@@ -226,7 +253,9 @@ async function syncMetrics() {
 
     updateChart(sizeChart, size);
   } catch {
-    log("Metrics unavailable");
+    if (!coordinatorHealthy) {
+      log("Metrics unavailable", "warning");
+    }
   }
 }
 
@@ -263,6 +292,25 @@ async function syncBlindness() {
   }
 }
 
+/* ---------------- HEALTH SYNC ---------------- */
+async function syncHealth() {
+  try {
+    const response = await fetch(HEALTH_ENDPOINT, { cache: "no-store" });
+
+    if (!response.ok) throw new Error("Health check failed");
+
+    if (!coordinatorHealthy) {
+      coordinatorHealthy = true;
+      clearTransientWarnings();
+      document.getElementById("status").innerText = "ONLINE (BLIND AGGREGATOR)";
+      document.getElementById("status").className = "status-online";
+      log("Coordinator health check passed");
+    }
+  } catch {
+    coordinatorHealthy = false;
+  }
+}
+
 /* ---------------- INFERENCE ---------------- */
 
 function predict() {
@@ -296,6 +344,9 @@ setInterval(syncMetrics, 5000);
 
 setInterval(syncBlindness, 7000);
 
+setInterval(syncHealth, 4000);
+
 syncModel();
 syncMetrics();
 syncBlindness();
+syncHealth();
