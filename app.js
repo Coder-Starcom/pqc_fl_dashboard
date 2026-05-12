@@ -134,8 +134,6 @@ function createChart(id, label) {
   });
 }
 
-const gradChart = createChart("gradChart", "Gradient");
-
 const latChart = createChart("latChart", "Latency");
 
 const sizeChart = createChart("sizeChart", "Update Size");
@@ -219,7 +217,6 @@ async function syncMetrics() {
 
     document.getElementById("progressBar").style.width = percent + "%";
 
-    const grad = m.gradient_norm ?? m.training_metrics?.gradient_norm ?? 0;
     const lat =
       m.aggregation_ms ??
       m.mean_ring_encryption_ms ??
@@ -232,14 +229,10 @@ async function syncMetrics() {
 
     document.getElementById("clients").innerText = clients;
 
-    document.getElementById("gradNorm").innerText = grad.toFixed(PRECISION);
-
     document.getElementById("latency").innerText =
       Number(lat).toFixed(PRECISION);
 
     document.getElementById("updateSize").innerText = size;
-
-    updateChart(gradChart, grad);
 
     updateChart(latChart, lat);
 
