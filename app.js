@@ -5,6 +5,7 @@ const MODEL_ENDPOINT = `${API_BASE_URL}/global_model`;
 const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
 const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
 const STATUS_ENDPOINT = `${API_BASE_URL}/status`;
+const API_AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
 
 console.info("Dashboard origin:", window.location.origin || "null");
 console.info("Coordinator API:", API_BASE_URL);
@@ -21,8 +22,13 @@ function setCoordinatorStatus(text, className) {
 }
 
 function buildRequestOptions() {
+  const headers = {};
+  if (API_AUTH_TOKEN) {
+    headers["X-Client-Token"] = API_AUTH_TOKEN;
+  }
   return {
     cache: "no-store",
+    headers,
   };
 }
 
@@ -43,6 +49,9 @@ function log(msg, kind = "info") {
   entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
 
   container.prepend(entry);
+  while (container.children.length > 100) {
+    container.removeChild(container.lastChild);
+  }
 }
 
 function clearTransientWarnings() {
