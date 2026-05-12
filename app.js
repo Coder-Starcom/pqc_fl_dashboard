@@ -194,6 +194,7 @@ async function syncModel() {
     );
     modelFailures = 0;
   } catch (e) {
+    console.warn("syncModel failed", e);
     modelFailures += 1;
     if (healthFailures < 3) {
       setCoordinatorStatus("BOOTING", "status-booting");
@@ -251,7 +252,8 @@ async function syncMetrics() {
 
     updateChart(sizeChart, size);
     metricsFailures = 0;
-  } catch {
+  } catch (e) {
+    console.warn("syncMetrics failed", e);
     metricsFailures += 1;
     if (metricsFailures === 1 && !coordinatorHealthy) {
       logOnce(warningKey("Metrics unavailable"), "Metrics unavailable", "warning");
@@ -284,7 +286,8 @@ async function syncBlindness() {
 
     log(`Blindness verification status: ${state}`);
     blindnessFailures = 0;
-  } catch {
+  } catch (e) {
+    console.warn("syncBlindness failed", e);
     blindnessFailures += 1;
     const label = document.getElementById("blindnessStatus");
     label.innerText = blindnessFailures < 3
@@ -322,7 +325,8 @@ async function syncHealth() {
       }
       log("Coordinator health check passed");
     }
-  } catch {
+  } catch (e) {
+    console.warn("syncHealth failed", e);
     healthFailures += 1;
     coordinatorHealthy = false;
     if (healthFailures < 3) {
