@@ -6,6 +6,7 @@ const METRICS_ENDPOINT = `${API_BASE_URL}/metrics`;
 const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
 const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
 const STATUS_ENDPOINT = `${API_BASE_URL}/status`;
+const API_AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
 
 let globalCiphertext = { u: [], v: [] };
 let ciphertextTupleBytes = 0;
@@ -23,6 +24,18 @@ function setCoordinatorStatus(text, className) {
   const el = document.getElementById("status");
   el.innerText = text;
   el.className = className;
+}
+
+function buildRequestOptions() {
+  const headers = {};
+  if (API_AUTH_TOKEN) {
+    headers["X-Client-Token"] = API_AUTH_TOKEN;
+  }
+
+  return {
+    cache: "no-store",
+    headers,
+  };
 }
 
 function warningKey(text) {
@@ -156,7 +169,7 @@ function updateChart(chart, value) {
 async function syncModel() {
   try {
     const response = await fetch(MODEL_ENDPOINT, {
-      cache: "no-store",
+      ...buildRequestOptions(),
     });
 
     if (!response.ok) throw new Error(`Coordinator offline (${response.status})`);
@@ -198,7 +211,7 @@ async function syncModel() {
 async function syncMetrics() {
   try {
     const res = await fetch(METRICS_ENDPOINT, {
-      cache: "no-store",
+      ...buildRequestOptions(),
     });
 
     if (!res.ok) throw new Error();
@@ -250,30 +263,26 @@ async function syncMetrics() {
 async function syncBlindness() {
   try {
     const response = await fetch(BLINDNESS_ENDPOINT, {
-      cache: "no-store",
+      ...buildRequestOptions(),
     });
 
     if (!response.ok) throw new Error("Blindness endpoint unavailable");
 
     const data = await response.json();
-    const entropy = Number(data.entropy_bits ?? 0);
-    const variance = Number(data.variance ?? 0);
-    const state =
-      entropy >= HIGH_ENTROPY_THRESHOLD
-        ? "CRYPTOGRAPHICALLY BLIND"
-        : "UNDER REVIEW";
+    const verified = Boolean(data.verified);
+    const state = verified ? "CRYPTOGRAPHICALLY BLIND" : "UNDER REVIEW";
 
     const label = document.getElementById("blindnessStatus");
     label.innerText = `Aggregator State: ${state}`;
     label.className =
-      entropy >= HIGH_ENTROPY_THRESHOLD ? "blindness-ok" : "blindness-warn";
+      verified ? "blindness-ok" : "blindness-warn";
 
     document.getElementById("blindnessEntropy").innerText =
-      entropy.toFixed(PRECISION);
+      verified ? "hidden" : "0";
     document.getElementById("blindnessVariance").innerText =
-      variance.toFixed(PRECISION);
+      verified ? "hidden" : "0";
 
-    log(`Blindness verified. Entropy ${entropy.toFixed(PRECISION)}`);
+    log(`Blindness verification status: ${state}`);
     blindnessFailures = 0;
   } catch {
     blindnessFailures += 1;
@@ -289,12 +298,12 @@ async function syncBlindness() {
 async function syncHealth() {
   try {
     let response = await fetch(STATUS_ENDPOINT, {
-      cache: "no-store",
+      ...buildRequestOptions(),
     });
 
     if (!response.ok) {
       response = await fetch(HEALTH_ENDPOINT, {
-        cache: "no-store",
+        ...buildRequestOptions(),
       });
     }
 
