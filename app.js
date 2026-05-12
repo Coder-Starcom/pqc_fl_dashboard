@@ -1,7 +1,6 @@
 const API_BASE_URL =
   window.__API_BASE_URL__ ||
   "https://pq-federated-coordinator-v3.onrender.com";
-const API_AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
 const MODEL_ENDPOINT = `${API_BASE_URL}/global_model`;
 const METRICS_ENDPOINT = `${API_BASE_URL}/metrics`;
 const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
@@ -19,14 +18,6 @@ let blindnessFailures = 0;
 const EXPECTED_CLIENTS = 2;
 const PRECISION = 6;
 const HIGH_ENTROPY_THRESHOLD = 6.5;
-
-function requestHeaders() {
-  const headers = {};
-  if (API_AUTH_TOKEN) {
-    headers["X-Client-Token"] = API_AUTH_TOKEN;
-  }
-  return headers;
-}
 
 function setCoordinatorStatus(text, className) {
   const el = document.getElementById("status");
@@ -168,7 +159,6 @@ async function syncModel() {
   try {
     const response = await fetch(MODEL_ENDPOINT, {
       cache: "no-store",
-      headers: requestHeaders(),
     });
 
     if (!response.ok) throw new Error(`Coordinator offline (${response.status})`);
@@ -211,7 +201,6 @@ async function syncMetrics() {
   try {
     const res = await fetch(METRICS_ENDPOINT, {
       cache: "no-store",
-      headers: requestHeaders(),
     });
 
     if (!res.ok) throw new Error();
@@ -269,7 +258,6 @@ async function syncBlindness() {
   try {
     const response = await fetch(BLINDNESS_ENDPOINT, {
       cache: "no-store",
-      headers: requestHeaders(),
     });
 
     if (!response.ok) throw new Error("Blindness endpoint unavailable");
@@ -309,13 +297,11 @@ async function syncHealth() {
   try {
     let response = await fetch(STATUS_ENDPOINT, {
       cache: "no-store",
-      headers: requestHeaders(),
     });
 
     if (!response.ok) {
       response = await fetch(HEALTH_ENDPOINT, {
         cache: "no-store",
-        headers: requestHeaders(),
       });
     }
 
