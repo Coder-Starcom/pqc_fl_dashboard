@@ -3,37 +3,115 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PQC Federated Dashboard</title>
+    <title>Post-Quantum Federated Learning Hub</title>
     <link rel="stylesheet" href="style.css" />
-    <script src="config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
-    <h1 class="title">PQC Federated Dashboard</h1>
-    <p class="subtitle">Live Metrics Overview</p>
+    <h1 class="title">PQC FEDERATED FRAUD MONITOR</h1>
+    <div class="subtitle" id="connection-status">
+      SYSTEM MONITOR:
+      <span class="status-online">CONNECTING TO COORDINATOR</span>
+    </div>
 
-    <section class="charts-section">
-      <div class="charts-grid">
-        <div class="card chart-card">
-          <h3>Federated Convergence</h3>
-          <canvas id="chartConvergence"></canvas>
+    <div class="grid status-grid">
+      <div class="card">
+        <h2>Orchestrator Sequence</h2>
+        <div class="value" id="meta-round">R: -- / 10</div>
+        <div class="progress-container">
+          <div class="progress-bar" id="round-progress"></div>
         </div>
-        <div class="card chart-card">
-          <h3>Noise Budget Decay</h3>
-          <canvas id="chartNoise"></canvas>
-        </div>
-        <div class="card chart-card">
-          <h3>Security Tax Latency</h3>
-          <canvas id="chartSecurityTax"></canvas>
-        </div>
-        <div class="card chart-card">
-          <h3>Bandwidth Optimization</h3>
-          <canvas id="chartBandwidth"></canvas>
+        <div
+          class="core-badge"
+          style="
+            border-color: rgba(188, 140, 255, 0.4);
+            color: var(--pqc);
+            background: rgba(188, 140, 255, 0.05);
+          "
+        >
+          LATTICE IDENTITY CHECK VERIFIED
         </div>
       </div>
-    </section>
 
-    <script src="api.js"></script>
+      <div class="card">
+        <h2>Current Global Metrics</h2>
+        <div class="value" id="meta-accuracy">--%</div>
+        <div class="metric subtlety">
+          Current Cross-Entropy Loss:
+          <span class="value-inline" id="meta-loss">--</span>
+        </div>
+        <div class="metric subtle" id="meta-clients">
+          Connected Clients: -- active nodes
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Ring-LWE Scheme Properties</h2>
+        <div
+          class="value"
+          style="font-size: 36px; padding: 12px 0; color: var(--pqc)"
+        >
+          N = 1024
+        </div>
+        <div class="metric subtle">
+          Modulus Dimension:
+          <span class="value-inline" style="color: var(--pqc)">q = 12289</span>
+        </div>
+        <div class="metric subtle">
+          Error Distribution Bound:
+          <span class="value-inline" style="color: var(--pqc)"
+            >&sigma; = 3.2</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-section">
+      <div class="section-heading">Engine Diagnostic Tracking Layers</div>
+      <div class="charts-grid">
+        <div class="card chart-card">
+          <h3>Plot 02: Real-time Convergence Horizon</h3>
+          <canvas id="chartConvergence"></canvas>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Plot 04: Hardware Execution Security Tax</h3>
+          <canvas id="chartSecurityTax"></canvas>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Plot 06: Lattice Noise Budget Horizon</h3>
+          <canvas id="chartNoise"></canvas>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Plot 07: SMOTE Class Imbalance Lift Profile</h3>
+          <canvas id="chartSmote"></canvas>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Plot 09: Differential Privacy Utility Bounds</h3>
+          <canvas id="chartDpTradeoff"></canvas>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Plot 10: Cryptographic Weight Entropy (Blindness)</h3>
+          <canvas id="chartEntropy"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-container" id="terminalLog">
+      <div class="log-entry">
+        [SYSTEM REBOOT] Initializing primary Ring-LWE coordination nodes...
+      </div>
+      <div class="log-entry">
+        [NETWORK AUTH] System token matching established safely using baseline
+        secrets.
+      </div>
+    </div>
+
+    <script src="config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
