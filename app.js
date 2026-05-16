@@ -295,19 +295,45 @@ async function syncHealth() {
   }
 }
 
+// Update syncMetrics to handle rolling histories and structural snapshots
 async function syncMetrics() {
   try {
     const rows = await PqcApi.fetchMetrics();
     metricsFailures = 0;
     updateLatestMetrics(rows);
-    // Live‑rolling charts
-    renderConvergenceChart(rows);
-    renderLatencyChart(rows);
-    renderBandwidthChart(rows);
-    renderNoiseBudgetChart(rows);
-    renderScalabilityChart(rows);
-    // If no data yet, fall back to local artifacts for snapshot charts
-    if (!rows || rows.length === 0) syncLocalArtifacts();
+
+    // Rolling Histories (Plots 02, 04, 05, 06, 08)
+    const rollingPlots = [chartPlot02, chartPlot04, chartPlot05, chartPlot06, chartPlot08];
+    rollingPlots.forEach((chart, index) => {
+      if (chart && rows) {
+        rows.forEach(row => {
+          if (!chart.data.labels.includes(row.round_number)) {
+            chart.data.labels.push(row.round_number);
+            chart.data.datasets[0].data.push(row.accuracy || row.latency || row.bandwidth_kb || row.noise_budget);
+            chart.update('none');
+          }
+        });
+      }
+    });
+
+    // Structural Snapshots (Plots 01, 03, 07, 09, 10)
+    const snapshotFiles = [
+      "plots_data_integrity.json",
+      "plots_data_pr.json",
+      "plots_data_smote.json",
+      "plots_data_dp.json",
+      "plots_data_entropy.json"
+    ];
+    snapshotFiles.forEach(async (file, index) => {
+      const data = await PqcApi.fetchLocalArtifact(file);
+      if (data) {
+        const chart = window[`chartPlot0${index + 1}`];
+        if (chart) {
+          chart.data.datasets[0].data = data.map(d => ({ x: d.x, y: d.y }));
+          chart.update();
+        }
+      }
+    });
   } catch (e) {
     metricsFailures = (metricsFailures ?? 0) + 1;
     syncLocalArtifacts();
