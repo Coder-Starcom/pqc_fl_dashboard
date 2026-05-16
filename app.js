@@ -37,7 +37,25 @@ function updateLatestMetrics(rows) {
 }
 
 // Helper to destroy existing chart instances (useful for hot‑reload)
-function destroyIfExists(name) { if (window[name]) window[name].destroy(); }
+// Helper to destroy existing chart instances (useful for hot‑reload)
+function destroyIfExists(name) {
+  const instance = window[name];
+  if (instance instanceof Chart && typeof instance.destroy === "function") {
+    instance.destroy();
+  }
+}
+
+// After initializing all charts, expose them on window for cleanup
+window.chartPlot01 = chartPlot01;
+window.chartPlot02 = chartPlot02;
+window.chartPlot03 = chartPlot03;
+window.chartPlot04 = chartPlot04;
+window.chartPlot05 = chartPlot05;
+window.chartPlot06 = chartPlot06;
+window.chartPlot07 = chartPlot07;
+window.chartPlot08 = chartPlot08;
+window.chartPlot09 = chartPlot09;
+window.chartPlot10 = chartPlot10;
 
 function initCharts() {
   // Ensure previous instances are cleaned
@@ -149,7 +167,19 @@ function initCharts() {
     ] },
     options: { responsive: true, scales: { x: { title: { display: true, text: "Value" }, stacked: false }, y: { title: { display: true, text: "Frequency" }, stacked: false } } }
   });
+  // Expose chart instances globally for cleanup
+  window.chartPlot01 = chartPlot01;
+  window.chartPlot02 = chartPlot02;
+  window.chartPlot03 = chartPlot03;
+  window.chartPlot04 = chartPlot04;
+  window.chartPlot05 = chartPlot05;
+  window.chartPlot06 = chartPlot06;
+  window.chartPlot07 = chartPlot07;
+  window.chartPlot08 = chartPlot08;
+  window.chartPlot09 = chartPlot09;
+  window.chartPlot10 = chartPlot10;
 }
+
 
 // ---------- Render Functions (live‑rolling data) ----------
 function renderConvergenceChart(rows) {
