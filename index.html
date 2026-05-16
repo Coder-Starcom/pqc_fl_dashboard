@@ -3,57 +3,60 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>PQC Federated Control Centre</title>
-
     <link rel="stylesheet" href="style.css" />
-
     <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
-
   <body>
     <h1 class="title">PQC Federated Monitor</h1>
+    <p class="subtitle">Unified Production Core — RLWE telemetry and fraud metrics</p>
 
-    <div class="grid">
-      <!-- Coordinator Card -->
-
+    <div class="grid status-grid">
       <div class="card">
-        <h2>Coordinator Node</h2>
-
+        <h2>Coordinator</h2>
         <div id="status" class="status-booting">BOOTING</div>
-
-        <div id="round" class="value">0</div>
-
-        <div class="pqc-status">Post-Quantum Layer: VERIFIED (RLWE-AHE)</div>
+        <div class="metric">Round <span id="round" class="value-inline">—</span></div>
+        <div class="metric subtle">Clients <span id="clientCount">—</span></div>
+        <div class="core-badge">RLWE Blind Aggregation Active</div>
       </div>
 
-      <!-- Blindness Verification -->
-
       <div class="card">
-        <h2>Blindness Verification</h2>
-
-        <div id="blindnessStatus" class="blindness-warn">
-          Aggregator State: INITIALIZING
-        </div>
-
-        <div class="metric">
-          Entropy: <span id="blindnessEntropy">0</span> bits
-        </div>
-
-        <div class="metric">
-          Variance: <span id="blindnessVariance">0</span>
-        </div>
+        <h2>Latest Metrics</h2>
+        <div class="metric">Accuracy <span id="latestAccuracy">—</span></div>
+        <div class="metric">Loss <span id="latestLoss">—</span></div>
+        <div class="metric">Noise budget <span id="latestNoise">—</span></div>
+        <div class="metric">Bandwidth <span id="latestBandwidth">—</span> KB</div>
       </div>
     </div>
 
-    <!-- Logs -->
-
-      <div class="log-container" id="logs">
-        <div class="log-entry">
-          System booting... Fetching global model from Render...
+    <section class="charts-section">
+      <h2 class="section-heading">Federated Telemetry</h2>
+      <div class="charts-grid">
+        <div class="card chart-card">
+          <h3>02 — Convergence (held-out accuracy)</h3>
+          <canvas id="chartConvergence"></canvas>
+        </div>
+        <div class="card chart-card">
+          <h3>06 — Noise budget decay</h3>
+          <canvas id="chartNoise"></canvas>
+        </div>
+        <div class="card chart-card">
+          <h3>07 — SMOTE recall lift</h3>
+          <canvas id="chartSmote"></canvas>
+        </div>
+        <div class="card chart-card">
+          <h3>09 — DP privacy-utility trade-off</h3>
+          <canvas id="chartDp"></canvas>
         </div>
       </div>
+    </section>
 
+    <div class="log-container" id="logs">
+      <div class="log-entry">System booting. Connecting to coordinator API.</div>
+    </div>
+
+    <script src="api.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

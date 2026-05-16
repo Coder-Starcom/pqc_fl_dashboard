@@ -1,19 +1,30 @@
-const API_BASE_URL =
-  window.__API_BASE_URL__ ||
-  "https://pq-federated-coordinator-v3.onrender.com";
-const MODEL_ENDPOINT = `${API_BASE_URL}/global_model`;
-const BLINDNESS_ENDPOINT = `${API_BASE_URL}/api/verify_blindness`;
-const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
-const STATUS_ENDPOINT = `${API_BASE_URL}/status`;
-const API_AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
+/**
+ * PQC Federated Dashboard — Unified Production Core UI
+ */
 
-console.info("Dashboard origin:", window.location.origin || "null");
-console.info("Coordinator API:", API_BASE_URL);
+const DEEP_BLUE = "#003366";
+const SECURITY_ORANGE = "#FF8C00";
+const NEUTRAL_GRAY = "#808080";
+const DANGER_RED = "#C62828";
 
-let coordinatorHealthy = false;
 let healthFailures = 0;
-let modelFailures = 0;
-let blindnessFailures = 0;
+let metricsFailures = 0;
+let chartConvergence;
+let chartNoise;
+let chartSmote;
+let chartDp;
+
+function log(msg, kind = "info") {
+  const container = document.getElementById("logs");
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  entry.dataset.kind = kind;
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  container.prepend(entry);
+  while (container.children.length > 100) {
+    container.removeChild(container.lastChild);
+  }
+}
 
 function setCoordinatorStatus(text, className) {
   const el = document.getElementById("status");
@@ -21,184 +32,250 @@ function setCoordinatorStatus(text, className) {
   el.className = className;
 }
 
-function buildRequestOptions() {
-  const headers = {};
-  if (API_AUTH_TOKEN) {
-    headers["X-Client-Token"] = API_AUTH_TOKEN;
-  }
-  return {
-    cache: "no-store",
-    headers,
-  };
-}
-
-function warningKey(text) {
-  return text;
-}
-
-/* ---------------- LOGGING ---------------- */
-
-function log(msg, kind = "info") {
-  const container = document.getElementById("logs");
-
-  const entry = document.createElement("div");
-
-  entry.className = "log-entry";
-  entry.dataset.kind = kind;
-
-  entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
-
-  container.prepend(entry);
-  while (container.children.length > 100) {
-    container.removeChild(container.lastChild);
-  }
-}
-
-function clearTransientWarnings() {
-  document
-    .querySelectorAll('.log-entry[data-kind="warning"]')
-    .forEach((entry) => {
-      const text = entry.textContent || "";
-      if (text.includes("Coordinator unreachable")) {
-        entry.remove();
-      }
-    });
-}
-
-function logOnce(key, msg, kind = "info") {
-  const existing = Array.from(document.querySelectorAll(".log-entry")).some(
-    (entry) => entry.dataset.logKey === key,
+function updateLatestMetrics(rows) {
+  if (!rows.length) return;
+  const latest = rows[rows.length - 1];
+  document.getElementById("latestAccuracy").textContent = Number(
+    latest.accuracy,
+  ).toFixed(4);
+  document.getElementById("latestLoss").textContent = Number(latest.loss).toFixed(
+    4,
   );
-  if (existing) return;
-
-  const container = document.getElementById("logs");
-  const entry = document.createElement("div");
-  entry.className = "log-entry";
-  entry.dataset.kind = kind;
-  entry.dataset.logKey = key;
-  entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  container.prepend(entry);
+  document.getElementById("latestNoise").textContent = Number(
+    latest.noise_budget,
+  ).toFixed(2);
+  document.getElementById("latestBandwidth").textContent = Number(
+    latest.bandwidth_kb,
+  ).toFixed(2);
 }
 
-/* ---------------- MODEL SYNC ---------------- */
+function initCharts() {
+  chartConvergence = new Chart(document.getElementById("chartConvergence"), {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "Test accuracy",
+          data: [],
+          borderColor: DEEP_BLUE,
+          backgroundColor: "rgba(0, 51, 102, 0.15)",
+          tension: 0.25,
+          yAxisID: "y",
+        },
+        {
+          label: "Test loss",
+          data: [],
+          borderColor: NEUTRAL_GRAY,
+          borderDash: [6, 4],
+          tension: 0.25,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { min: 0.45, max: 1.02, title: { display: true, text: "Accuracy" } },
+        y1: {
+          position: "right",
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: "Loss" },
+        },
+      },
+    },
+  });
 
-async function syncModel() {
-  try {
-    const response = await fetch(MODEL_ENDPOINT, {
-      ...buildRequestOptions(),
-    });
+  chartNoise = new Chart(document.getElementById("chartNoise"), {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "Noise budget",
+          data: [],
+          borderColor: DEEP_BLUE,
+          fill: true,
+          backgroundColor: "rgba(0, 51, 102, 0.12)",
+          tension: 0.2,
+        },
+        {
+          label: "Failure threshold",
+          data: [],
+          borderColor: DANGER_RED,
+          borderDash: [8, 4],
+          pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          min: 0,
+          max: 45,
+          title: { display: true, text: "Remaining budget" },
+        },
+      },
+    },
+  });
 
-    if (!response.ok) throw new Error(`Coordinator offline (${response.status})`);
+  chartSmote = new Chart(document.getElementById("chartSmote"), {
+    type: "bar",
+    data: {
+      labels: ["Federated Vanilla", "Federated SMOTE"],
+      datasets: [
+        {
+          label: "Fraud recall",
+          data: [0, 0],
+          backgroundColor: [NEUTRAL_GRAY, SECURITY_ORANGE],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { min: 0, max: 1.05, title: { display: true, text: "Recall" } },
+      },
+    },
+  });
 
-    const data = await response.json();
+  chartDp = new Chart(document.getElementById("chartDp"), {
+    type: "line",
+    data: {
+      labels: ["0.5", "2.0", "8.0"],
+      datasets: [
+        {
+          label: "Accuracy vs epsilon",
+          data: [0, 0, 0],
+          borderColor: SECURITY_ORANGE,
+          backgroundColor: "rgba(255, 140, 0, 0.15)",
+          tension: 0.2,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { title: { display: true, text: "Privacy budget (epsilon)" } },
+        y: { min: 0, max: 1.05, title: { display: true, text: "Accuracy" } },
+      },
+    },
+  });
+}
 
-    setCoordinatorStatus("ONLINE (BLIND AGGREGATOR)", "status-online");
+function renderMetricsCharts(rows) {
+  const labels = rows.map((row) => String(row.round_number));
+  const accuracies = rows.map((row) => Number(row.accuracy));
+  const losses = rows.map((row) => Number(row.loss));
+  const noise = rows.map((row) => Number(row.noise_budget));
+  const threshold = labels.map(() => 5);
 
-    document.getElementById("round").innerText = data.round;
+  chartConvergence.data.labels = labels;
+  chartConvergence.data.datasets[0].data = accuracies;
+  chartConvergence.data.datasets[1].data = losses;
+  chartConvergence.update();
 
-    log(
-      `Encrypted payload received. Round ${data.round} is available.`,
-    );
-    modelFailures = 0;
-  } catch (e) {
-    console.warn("syncModel failed", e, "origin=", window.location.origin || "null");
-    modelFailures += 1;
-    if (healthFailures < 3) {
-      setCoordinatorStatus("BOOTING", "status-booting");
-    } else {
-      setCoordinatorStatus("OFFLINE", "status-offline");
-    }
+  chartNoise.data.labels = labels;
+  chartNoise.data.datasets[0].data = noise;
+  chartNoise.data.datasets[1].data = threshold;
+  chartNoise.update();
+}
 
-    if (modelFailures === 1) {
-      logOnce(warningKey("Coordinator unreachable"), "Coordinator unreachable", "warning");
-    }
+function renderSmoteChart(payload) {
+  if (!payload) {
+    log("SMOTE artifact missing — bundle plots_data_smote.json with the dashboard", "warning");
+    return;
   }
+  const vanilla = Number(payload.vanilla_recall);
+  const smote = Number(payload.smote_recall);
+  chartSmote.data.datasets[0].data = [vanilla, smote];
+  chartSmote.update();
+  log(`SMOTE recall lift: ${vanilla.toFixed(2)} → ${smote.toFixed(2)}`);
 }
 
-/* ---------------- BLINDNESS VERIFY ---------------- */
-async function syncBlindness() {
-  try {
-    const response = await fetch(BLINDNESS_ENDPOINT, {
-      ...buildRequestOptions(),
-    });
-
-    if (!response.ok) throw new Error("Blindness endpoint unavailable");
-
-    const data = await response.json();
-    const verified = Boolean(data.verified);
-    const state = verified ? "CRYPTOGRAPHICALLY BLIND" : "UNDER REVIEW";
-
-    const label = document.getElementById("blindnessStatus");
-    label.innerText = `Aggregator State: ${state}`;
-    label.className =
-      verified ? "blindness-ok" : "blindness-warn";
-
-    document.getElementById("blindnessEntropy").innerText =
-      verified ? "hidden" : "0";
-    document.getElementById("blindnessVariance").innerText =
-      verified ? "hidden" : "0";
-
-    log(`Blindness verification status: ${state}`);
-    blindnessFailures = 0;
-  } catch (e) {
-    console.warn("syncBlindness failed", e, "origin=", window.location.origin || "null");
-    blindnessFailures += 1;
-    const label = document.getElementById("blindnessStatus");
-    label.innerText = blindnessFailures < 3
-      ? "Aggregator State: INITIALIZING"
-      : "Aggregator State: VERIFICATION UNAVAILABLE";
-    label.className = "blindness-warn";
+function renderDpChart(payload) {
+  if (!payload || !payload.points) {
+    log("DP artifact missing — bundle plots_data_dp.json with the dashboard", "warning");
+    return;
   }
+  const sorted = [...payload.points].sort(
+    (left, right) => Number(left.epsilon) - Number(right.epsilon),
+  );
+  chartDp.data.labels = sorted.map((point) => String(point.epsilon));
+  chartDp.data.datasets[0].data = sorted.map((point) => Number(point.accuracy));
+  chartDp.update();
+  log("DP trade-off curve refreshed (low ε → low accuracy)");
 }
 
-/* ---------------- HEALTH SYNC ---------------- */
 async function syncHealth() {
   try {
-    let response = await fetch(STATUS_ENDPOINT, {
-      ...buildRequestOptions(),
-    });
-
-    if (!response.ok) {
-      response = await fetch(HEALTH_ENDPOINT, {
-        ...buildRequestOptions(),
-      });
-    }
-
-    if (!response.ok) throw new Error("Health check failed");
-
-    const data = await response.json();
-    coordinatorHealthy = true;
+    const data = await PqcApi.fetchHealth();
     healthFailures = 0;
-
-    if (data?.status === "ok") {
-      clearTransientWarnings();
-      if (data.has_aggregate_ciphertext) {
-        setCoordinatorStatus("ONLINE (BLIND AGGREGATOR)", "status-online");
-      } else {
-        setCoordinatorStatus("ONLINE (BOOTING)", "status-booting");
-      }
-      log("Coordinator health check passed");
-    }
-  } catch (e) {
-    console.warn("syncHealth failed", e, "origin=", window.location.origin || "null");
+    document.getElementById("round").textContent = data.round ?? "—";
+    document.getElementById("clientCount").textContent = data.clients ?? "—";
+    setCoordinatorStatus("ONLINE", "status-online");
+    log("Health check passed (/health, no auth token)");
+  } catch (error) {
     healthFailures += 1;
-    coordinatorHealthy = false;
-    if (healthFailures < 3) {
-      setCoordinatorStatus("BOOTING", "status-booting");
-    } else {
-      setCoordinatorStatus("OFFLINE", "status-offline");
+    setCoordinatorStatus(
+      healthFailures < 3 ? "BOOTING" : "OFFLINE",
+      healthFailures < 3 ? "status-booting" : "status-offline",
+    );
+    if (healthFailures === 1) {
+      log("Coordinator unreachable on /health", "warning");
     }
   }
 }
 
-/* ---------------- POLLING ---------------- */
+async function syncMetrics() {
+  try {
+    const rows = await PqcApi.fetchMetrics();
+    metricsFailures = 0;
+    updateLatestMetrics(rows);
+    renderMetricsCharts(rows);
+    log(`Metrics synced — ${rows.length} rounds (merged by round_number)`);
+  } catch (error) {
+    metricsFailures += 1;
+    if (metricsFailures === 1) {
+      log("Metrics fetch failed — verify X-Client-Token", "warning");
+    }
+  }
+}
 
-setInterval(syncModel, 5000);
+async function syncGlobalModel() {
+  try {
+    const data = await PqcApi.fetchGlobalModel();
+    if (data.ciphertext_u && data.ciphertext_v) {
+      log(`Global ciphertext available for round ${data.round}`);
+    } else {
+      log(`Round ${data.round}: ${data.message || "awaiting aggregation"}`);
+    }
+  } catch {
+    /* metrics + health already surface connectivity */
+  }
+}
 
-setInterval(syncBlindness, 7000);
+async function syncLocalArtifacts() {
+  const smote = await PqcApi.fetchLocalArtifact("plots_data_smote.json");
+  const dp = await PqcApi.fetchLocalArtifact("plots_data_dp.json");
+  renderSmoteChart(smote);
+  renderDpChart(dp);
+}
 
-setInterval(syncHealth, 4000);
+function boot() {
+  console.info("Dashboard API:", PqcApi.API_BASE_URL);
+  initCharts();
+  syncHealth();
+  syncMetrics();
+  syncGlobalModel();
+  syncLocalArtifacts();
 
-syncModel();
-syncBlindness();
-syncHealth();
+  setInterval(syncHealth, 4000);
+  setInterval(syncMetrics, 6000);
+  setInterval(syncGlobalModel, 8000);
+  setInterval(syncLocalArtifacts, 30000);
+}
+
+boot();
