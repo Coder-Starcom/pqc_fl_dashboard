@@ -12,45 +12,8 @@ const API_SIGNATURE_SECRET =
 
 const ENDPOINTS = {
   health: `${API_BASE_URL}/health`,
-  metrics: `${API_BASE_URL}/metrics`,
-  globalModel: `${API_BASE_URL}/global_model`,
-  sharedContext: `${API_BASE_URL}/api/shared_context`,
-  submitUpdate: `${API_BASE_URL}/submit_update`,
-  dashboard: `${API_BASE_URL}/`,
+  metrics: `${API_BASE_URL}/metrics`
 };
-
-function canonicalStringify(value) {
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => canonicalStringify(item)).join(",")}]`;
-  }
-  const keys = Object.keys(value).sort();
-  const body = keys
-    .map((key) => `${JSON.stringify(key)}:${canonicalStringify(value[key])}`)
-    .join(",");
-  return `{${body}}`;
-}
-
-async function hmacSha256Hex(secret, message) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(message),
-  );
-  return Array.from(new Uint8Array(signature))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 function buildAuthHeaders(extra = {}) {
   const headers = { ...extra };
@@ -88,32 +51,6 @@ async function fetchMetrics() {
   return normalizeMetricsRounds(payload.rounds || []);
 }
 
-async function fetchGlobalModel() {
-  return fetchWithAuth("/global_model");
-}
-
-async function fetchSharedContext() {
-  return fetchWithAuth("/api/shared_context");
-}
-
-async function submitUpdate(updatePayload) {
-  const body = canonicalStringify(updatePayload);
-  const signature = await hmacSha256Hex(API_SIGNATURE_SECRET, body);
-  const response = await fetch(ENDPOINTS.submitUpdate, {
-    method: "POST",
-    cache: "no-store",
-    headers: buildAuthHeaders({
-      "Content-Type": "application/json",
-      "X-Client-Signature": signature,
-    }),
-    body,
-  });
-  if (!response.ok) {
-    throw new Error(`submit_update failed (${response.status})`);
-  }
-  return response.json();
-}
-
 /**
  * Merge metrics by round_number (matches core/metrics_tracker.update_round).
  */
@@ -126,10 +63,10 @@ function normalizeMetricsRounds(rows) {
     const normalizedRow = {
       ...row,
       round_number: roundNumber,
-      accuracy: row.accuracy !== undefined ? parseFloat(row.accuracy) : undefined,
-      loss: row.loss !== undefined ? parseFloat(row.loss) : undefined,
-      noise_budget: row.noise_budget !== undefined ? parseFloat(row.noise_budget) : undefined,
-      bandwidth_kb: row.bandwidth_kb !== undefined ? parseFloat(row.bandwidth_kb) : undefined
+      accuracy: parseFloat(row.accuracy) || 0,
+      loss: parseFloat(row.loss) || 0,
+      noise_budget: parseFloat(row.noise_budget) || 0,
+      bandwidth_kb: parseFloat(row.bandwidth_kb) || 0
     };
     
     const existing = byRound.get(roundNumber) || {};
@@ -156,10 +93,6 @@ window.PqcApi = {
   ENDPOINTS,
   fetchHealth,
   fetchMetrics,
-  fetchGlobalModel,
-  fetchSharedContext,
-  submitUpdate,
   fetchLocalArtifact,
   normalizeMetricsRounds,
-  canonicalStringify,
 };
