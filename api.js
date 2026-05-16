@@ -79,7 +79,8 @@ function normalizeMetricsRounds(rows) {
 
 async function fetchLocalArtifact(filename) {
   try {
-    const response = await fetch(filename, { cache: "no-store" });
+    const url = `${API_BASE_URL}/${filename}`;
+    const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) return null;
     return response.json();
   } catch {
