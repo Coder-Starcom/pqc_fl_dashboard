@@ -364,14 +364,30 @@ async function loadStaticJSONPlots() {
 async function syncLiveTelemetry() {
   try {
     const statusHeader = document.getElementById("connection-status");
+
+    // Match the exact custom header keys expected by the OpenAPI Gateway
     const res = await fetch(`${API_URL}/metrics`, {
-      headers: { Authorization: `${AUTH_TOKEN}` },
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-auth-token": window.__API_AUTH_TOKEN__ || "pq-fed-auth-token",
+        "x-signature": window.__API_SIGNATURE_SECRET__ || "pq-fed-auth-token",
+      },
     });
 
     if (!res.ok) {
-      if (statusHeader)
-        statusHeader.innerHTML =
-          'SYSTEM MONITOR: <span class="status-offline">DISCONNECTED (BAD GATEWAY)</span>';
+      if (res.status === 401 || res.status === 403) {
+        if (statusHeader)
+          statusHeader.innerHTML =
+            'SYSTEM MONITOR: <span class="status-offline">AUTHENTICATION FAILED (401)</span>';
+        writeLog(
+          "auth-error",
+          "Credentials rejected by OpenAPI security schema context.",
+        );
+      } else {
+        if (statusHeader)
+          statusHeader.innerHTML = `SYSTEM MONITOR: <span class="status-offline">DISCONNECTED (${res.status})</span>`;
+      }
       return;
     }
 
