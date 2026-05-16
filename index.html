@@ -30,27 +30,51 @@
       </div>
     </div>
 
-    <section class="charts-section">
-      <h2 class="section-heading">Federated Telemetry</h2>
-      <div class="charts-grid">
-        <div class="card chart-card">
-          <h3>02 — Convergence (held-out accuracy)</h3>
-          <canvas id="chartConvergence"></canvas>
-        </div>
-        <div class="card chart-card">
-          <h3>06 — Noise budget decay</h3>
-          <canvas id="chartNoise"></canvas>
-        </div>
-        <div class="card chart-card">
-          <h3>07 — SMOTE recall lift</h3>
-          <canvas id="chartSmote"></canvas>
-        </div>
-        <div class="card chart-card">
-          <h3>09 — DP privacy-utility trade-off</h3>
-          <canvas id="chartDp"></canvas>
-        </div>
-      </div>
-    </section>
+<section class="charts-section">
+  <h2 class="section-heading">Federated Telemetry</h2>
+  <div class="charts-grid">
+    <div class="card chart-card">
+      <h3>01 — Utility Integrity (Plaintext vs Decrypted Weights)</h3>
+      <canvas id="chartPlot01"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>02 — Federated Convergence Curve</h3>
+      <canvas id="chartPlot02"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>03 — Fraud Detection Precision‑Recall Baseline</h3>
+      <canvas id="chartPlot03"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>04 — Security Tax (Latency Breakdown)</h3>
+      <canvas id="chartPlot04"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>05 — Bandwidth Optimization (Payload Size)</h3>
+      <canvas id="chartPlot05"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>06 — Noise Budget Decay</h3>
+      <canvas id="chartPlot06"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>07 — Impact of SMOTE on Fraud Recall</h3>
+      <canvas id="chartPlot07"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>08 — Server‑Side Scalability</h3>
+      <canvas id="chartPlot08"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>09 — DP Privacy‑Utility Trade‑off</h3>
+      <canvas id="chartPlot09"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h3>10 — Entropy of Blindness (Statistical Obfuscation)</h3>
+      <canvas id="chartPlot10"></canvas>
+    </div>
+  </div>
+</section>
 
     <div class="log-container" id="logs">
       <div class="log-entry">System booting. Connecting to coordinator API.</div>
