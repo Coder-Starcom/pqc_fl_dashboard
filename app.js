@@ -365,7 +365,7 @@ async function syncLiveTelemetry() {
   try {
     const statusHeader = document.getElementById("connection-status");
     const res = await fetch(`${API_URL}/metrics`, {
-      headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+      headers: { Authorization: `${AUTH_TOKEN}` },
     });
 
     if (!res.ok) {
