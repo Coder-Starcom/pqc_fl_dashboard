@@ -120,13 +120,23 @@ async function submitUpdate(updatePayload) {
 function normalizeMetricsRounds(rows) {
   const byRound = new Map();
   for (const row of rows) {
-    const roundNumber = Number(row.round_number);
+    const roundNumber = parseInt(row.round_number, 10);
     if (Number.isNaN(roundNumber)) continue;
+    
+    const normalizedRow = {
+      ...row,
+      round_number: roundNumber,
+      accuracy: row.accuracy !== undefined ? parseFloat(row.accuracy) : undefined,
+      loss: row.loss !== undefined ? parseFloat(row.loss) : undefined,
+      noise_budget: row.noise_budget !== undefined ? parseFloat(row.noise_budget) : undefined,
+      bandwidth_kb: row.bandwidth_kb !== undefined ? parseFloat(row.bandwidth_kb) : undefined
+    };
+    
     const existing = byRound.get(roundNumber) || {};
-    byRound.set(roundNumber, { ...existing, ...row, round_number: roundNumber });
+    byRound.set(roundNumber, { ...existing, ...normalizedRow });
   }
   return [...byRound.values()].sort(
-    (left, right) => Number(left.round_number) - Number(right.round_number),
+    (left, right) => parseInt(left.round_number, 10) - parseInt(right.round_number, 10),
   );
 }
 
