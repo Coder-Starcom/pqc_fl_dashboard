@@ -273,3 +273,22 @@ canvas {
 
   padding: 4px 0;
 }
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  text-align: center;
+
+  /* Add these two lines to stabilize the card frame height */
+  height: 380px;
+  position: relative;
+}
+
+/* Force the canvas wrapper container to never exceed the card layout bounds */
+.chart-card canvas {
+  max-height: 280px !important;
+  width: 100% !important;
+}
