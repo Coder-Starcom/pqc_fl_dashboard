@@ -64,8 +64,7 @@ function initCharts() {
         maintainAspectRatio: false,
         scales: {
           yAcc: {
-            min: 0.5,
-            max: 1.0,
+            beginAtZero: true,
             position: "left",
             title: { display: true, text: "Val Accuracy", color: "#8b949e" },
           },
