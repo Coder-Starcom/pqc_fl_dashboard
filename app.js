@@ -408,7 +408,7 @@ async function syncLiveTelemetry() {
     );
 
     // Map live text data targets
-    document.getElementById("meta-round").innerText = `R: ${activeRound} / 10`;
+    document.getElementById("meta-round").innerText = `R: ${activeRound}`;
     document.getElementById("meta-accuracy").innerText =
       `${(parseFloat(currentVector.accuracy || 0.85) * 100).toFixed(1)}%`;
     document.getElementById("meta-loss").innerText = parseFloat(
@@ -449,10 +449,10 @@ async function syncLiveTelemetry() {
     // Update Live Chart 2: Security Tax Breakdown
     dashboardCharts.securityTax.data.labels = timelineLabels;
     dashboardCharts.securityTax.data.datasets[0].data = metricsLog.map(
-      () => 480,
+      (row) => parseFloat(row.encryption_time_ms) || 0,
     ); // baseline engine processing footprint
     dashboardCharts.securityTax.data.datasets[1].data = metricsLog.map(
-      (row) => parseFloat(row.encryption_time_ms) || 120,
+      (row) => parseFloat(row.bandwidth_bytes / 1024) || 50,
     );
     dashboardCharts.securityTax.update("none");
 
