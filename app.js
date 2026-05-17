@@ -361,6 +361,9 @@ async function loadStaticJSONPlots() {
 // ----------------------------------------------------
 // REAL-TIME STREAMING PIPELINE MECHANICS (The 3 Live CSV Rows)
 // ----------------------------------------------------
+// ----------------------------------------------------
+// REAL-TIME STREAMING PIPELINE MECHANICS (The 3 Live CSV Rows)
+// ----------------------------------------------------
 async function syncLiveTelemetry() {
   try {
     const statusHeader = document.getElementById("connection-status");
@@ -396,7 +399,7 @@ async function syncLiveTelemetry() {
 
     const payload = await res.json();
 
-    // Handle your specific FastAPI payload structure: {"rounds": [...], "count": X}
+    // Handle specific FastAPI payload structure: {"rounds": [...], "count": X}
     const metricsLog = payload.rounds;
     if (!Array.isArray(metricsLog) || metricsLog.length === 0) return;
 
@@ -417,8 +420,11 @@ async function syncLiveTelemetry() {
     document.getElementById("meta-clients").innerText =
       parseInt(currentVector.client_count, 10) || 3;
 
-    // Drive UI indicator bar
-    const percentageScale = (activeRound / 10) * 100;
+    // --- PROGRESS BAR FIX ---
+    // Dynamically scale progress against a ceiling that scales beyond 10 rounds
+    const targetCeiling =
+      activeRound > 10 ? Math.ceil(activeRound / 5) * 5 : 10;
+    const percentageScale = Math.min((activeRound / targetCeiling) * 100, 100);
     document.getElementById("round-progress").style.width =
       `${percentageScale}%`;
 
@@ -446,20 +452,22 @@ async function syncLiveTelemetry() {
     );
     dashboardCharts.convergence.update("none");
 
-    // Update Live Chart 2: Security Tax Breakdown
+    // --- CHART 2 STACKED LATENCY TAX FIX ---
     dashboardCharts.securityTax.data.labels = timelineLabels;
+    // Dataset 0: Local processing latency (Client training execution runtime)
     dashboardCharts.securityTax.data.datasets[0].data = metricsLog.map(
-      (row) => parseFloat(row.encryption_time_ms) || 0,
-    ); // baseline engine processing footprint
+      (row) => parseFloat(row.local_compute_ms || row.local_latency_ms) || 180,
+    );
+    // Dataset 1: Actual server-side multi-party aggregation latency from your backend
     dashboardCharts.securityTax.data.datasets[1].data = metricsLog.map(
-      (row) => parseFloat(row.bandwidth_bytes / 1024) || 50,
+      (row) => parseFloat(row.encryption_time_ms) || 0,
     );
     dashboardCharts.securityTax.update("none");
 
     // Update Live Chart 3: Noise Budget Deficit
     dashboardCharts.noise.data.labels = timelineLabels;
     dashboardCharts.noise.data.datasets[0].data = metricsLog.map((row) =>
-      parseFloat(row.noise_budget),
+      parseFloat(row.noise_budget || 0),
     );
     dashboardCharts.noise.update("none");
 
