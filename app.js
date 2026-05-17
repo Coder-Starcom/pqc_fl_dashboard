@@ -84,22 +84,21 @@ function initCharts() {
   );
 
   // Chart 2: Live Latency Tax
+  // Chart 2: Live PR-AUC Performance Horizon (Replaces old Hardware Tax bar chart)
   dashboardCharts.securityTax = new Chart(
     document.getElementById("chartSecurityTax").getContext("2d"),
     {
-      type: "bar",
+      type: "line",
       data: {
         labels: [],
         datasets: [
           {
-            label: "Local Compute Latency",
+            label: "Area Under Precision-Recall Curve (PR-AUC)",
             data: [],
-            backgroundColor: "#1f6feb",
-          },
-          {
-            label: "HE Enc / Aggregation Overhead",
-            data: [],
-            backgroundColor: "#bc8cff",
+            borderColor: "#bc8cff", // Neon purple accent line matching theme guidelines
+            backgroundColor: "rgba(188, 140, 255, 0.05)",
+            fill: true,
+            tension: 0.15,
           },
         ],
       },
@@ -107,12 +106,12 @@ function initCharts() {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { stacked: true },
           y: {
-            stacked: true,
+            min: 0.0,
+            max: 1.0,
             title: {
               display: true,
-              text: "Execution Cost (ms)",
+              text: "PR-AUC Score (Minority Class)",
               color: "#8b949e",
             },
           },
@@ -456,10 +455,6 @@ async function syncLiveTelemetry() {
     dashboardCharts.securityTax.data.labels = timelineLabels;
     // Dataset 0: Local processing latency (Client training execution runtime)
     dashboardCharts.securityTax.data.datasets[0].data = metricsLog.map(
-      (row) => parseFloat(row.local_compute_ms || row.local_latency_ms) || 180,
-    );
-    // Dataset 1: Actual server-side multi-party aggregation latency from your backend
-    dashboardCharts.securityTax.data.datasets[1].data = metricsLog.map(
       (row) => parseFloat(row.encryption_time_ms) || 0,
     );
     dashboardCharts.securityTax.update("none");
