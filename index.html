@@ -1,71 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Content Security Policy: Mitigates XSS or unauthorized data exfiltration -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://pq-federated-coordinator-v3.onrender.com;" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Post-Quantum Federated Learning Hub</title>
     <link rel="stylesheet" href="style.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Load Chart.js with safe deferral constraints -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    
+    <!-- FIXES Race Condition: Use defer to guarantee sequential execution without blocking HTML parsing -->
+    <script src="config.js" defer></script>
+    <script src="app.js" defer></script>
   </head>
   <body>
     <h1 class="title">PQC FEDERATED FRAUD MONITOR</h1>
     <div class="subtitle" id="connection-status">
-      SYSTEM MONITOR:
-      <span class="status-online">CONNECTING TO COORDINATOR</span>
+      SYSTEM MONITOR: <span class="status-online">CONNECTING TO COORDINATOR</span>
     </div>
 
     <div class="grid status-grid">
+      <!-- Card 1: Orchestrator Sequence Tracking -->
       <div class="card">
         <h2>Orchestrator Sequence</h2>
         <div class="value" id="meta-round">R: -- / 10</div>
-        <div class="progress-container">
-          <div class="progress-bar" id="round-progress"></div>
+        <div class="progress-container" aria-label="Federated training round progress">
+          <div class="progress-bar" id="round-progress" style="width: 0%;"></div>
         </div>
-        <div
-          class="core-badge"
-          style="
-            border-color: rgba(188, 140, 255, 0.4);
-            color: var(--pqc);
-            background: rgba(188, 140, 255, 0.05);
-          "
-        >
+        <div class="core-badge" style="border-color: rgba(188, 140, 255, 0.4); color: var(--pqc); background: rgba(188, 140, 255, 0.05);">
           LATTICE IDENTITY CHECK VERIFIED
         </div>
       </div>
 
+      <!-- Card 2: Core ML Optimization Metrics -->
       <div class="card">
         <h2>Current Global Metrics</h2>
         <div class="value" id="meta-accuracy">--%</div>
         <div class="metric subtlety">
-          Current Cross-Entropy Loss:
-          <span class="value-inline" id="meta-loss">--</span>
+          Current Cross-Entropy Loss: <span class="value-inline" id="meta-loss">--</span>
         </div>
         <div class="metric subtle" id="meta-clients">
           Connected Clients: -- active nodes
         </div>
       </div>
 
+      <!-- Card 3: Cryptographic Parameter Synchronization Vector -->
+      <!-- FIXES Q11 Mismatch: Explicitly aligns visible parameters with active RLWE engine -->
       <div class="card">
         <h2>Ring-LWE Scheme Properties</h2>
-        <div
-          class="value"
-          style="font-size: 36px; padding: 12px 0; color: var(--pqc)"
-        >
-          N = 1024
+        <div class="value" style="font-size: 36px; padding: 12px 0; color: var(--pqc)">
+          N = 512
         </div>
         <div class="metric subtle">
-          Modulus Dimension:
-          <span class="value-inline" style="color: var(--pqc)">q = 12289</span>
+          Modulus Dimension: <span class="value-inline" style="color: var(--pqc)">q = 8,380,417</span>
         </div>
         <div class="metric subtle">
-          Error Distribution Bound:
-          <span class="value-inline" style="color: var(--pqc)"
-            >&sigma; = 3.2</span
-          >
+          Error Distribution Bound: <span class="value-inline" style="color: var(--pqc)">&sigma; = 3.2</span>
         </div>
       </div>
     </div>
 
+    <!-- Live Performance Visualizer Grids -->
     <div class="charts-section">
       <div class="section-heading">Engine Diagnostic Tracking Layers</div>
       <div class="charts-grid">
@@ -75,7 +72,7 @@
         </div>
 
         <div class="card chart-card">
-          <h3>Plot 03: Area under Precision - Recall Curve</h3>
+          <h3>Plot 03: Performance Horizon Overhead</h3>
           <canvas id="chartSecurityTax"></canvas>
         </div>
 
@@ -101,17 +98,10 @@
       </div>
     </div>
 
+    <!-- Live Terminal Simulator Output Window -->
     <div class="log-container" id="terminalLog">
-      <div class="log-entry">
-        [SYSTEM REBOOT] Initializing primary Ring-LWE coordination nodes...
-      </div>
-      <div class="log-entry">
-        [NETWORK AUTH] System token matching established safely using baseline
-        secrets.
-      </div>
+      <div class="log-entry">[SYSTEM REBOOT] Initializing primary Ring-LWE coordination nodes...</div>
+      <div class="log-entry">[NETWORK AUTH] System token matching established safely using baseline secrets.</div>
     </div>
-
-    <script src="config.js"></script>
-    <script src="app.js"></script>
   </body>
 </html>
