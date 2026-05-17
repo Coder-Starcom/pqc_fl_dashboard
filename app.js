@@ -92,11 +92,12 @@ function initCharts() {
         labels: [],
         datasets: [
           {
-            label: "Core Processing Latency (ms)",
+            label: "Global AUPR Baseline",
             data: [],
-            borderColor: "#bc8cff",
-            backgroundColor: "rgba(188, 140, 255, 0.05)",
+            borderColor: "#3fb950",
+            backgroundColor: "rgba(63, 185, 80, 0.05)",
             fill: true,
+            borderWidth: 2,
             tension: 0.15,
           },
         ],
@@ -109,7 +110,7 @@ function initCharts() {
             beginAtZero: true, // Dynamically handle latencies instead of clipping at 0.1
             title: {
               display: true,
-              text: "Latency Overhead (Milliseconds)",
+              text: "AUPR Score",
               color: "#8b949e",
             },
           },
