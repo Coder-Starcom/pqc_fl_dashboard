@@ -108,7 +108,7 @@ function initCharts() {
         scales: {
           y: {
             min: 0.0,
-            max: 1.0,
+            max: 0.1,
             title: {
               display: true,
               text: "PR-AUC Score (Minority Class)",
