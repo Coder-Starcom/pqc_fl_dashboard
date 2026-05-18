@@ -32,7 +32,7 @@ body {
 
 /* Header Configurations */
 header {
-  border-b: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color); /* FIX: Corrected invalid border-b property */
   padding-bottom: 16px;
   margin-bottom: 24px;
 }
@@ -44,7 +44,7 @@ header {
     SF Mono,
     Menlo,
     Consolas,
-    Liberation Mono,
+    "Liberation Mono",
     monospace;
   font-size: 0.85rem;
   margin-top: 8px;
@@ -134,6 +134,7 @@ header {
 .chart-container {
   position: relative;
   width: 100%;
+  max-width: 100%; /* FIX: Prevents infinite horizontal blowout during paint redraws */
   height: 260px;
 }
 

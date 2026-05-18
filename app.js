@@ -384,13 +384,22 @@ async function syncLiveTelemetry() {
     const metaLossEl = document.getElementById("meta-loss");
     const metaClientsEl = document.getElementById("meta-clients");
 
+    // Target fallback mapping structures across dynamic schemas
+    const activeAccuracy =
+      currentVector.local_accuracy !== undefined
+        ? currentVector.local_accuracy
+        : currentVector.accuracy || 0.0;
+    const activeLoss =
+      currentVector.local_loss !== undefined
+        ? currentVector.local_loss
+        : currentVector.loss || 0.0;
+
     // Formats precisely to track relative completion ceilings safely
     if (metaRoundEl)
       metaRoundEl.innerText = `R: ${activeRound} / ${TOTAL_EXPECTED_ROUNDS}`;
     if (metaAccuracyEl)
-      metaAccuracyEl.innerText = `${(parseFloat(currentVector.accuracy || 0.0) * 100).toFixed(1)}%`;
-    if (metaLossEl)
-      metaLossEl.innerText = parseFloat(currentVector.loss || 0.0).toFixed(4);
+      metaAccuracyEl.innerText = `${(parseFloat(activeAccuracy) * 100).toFixed(1)}%`;
+    if (metaLossEl) metaLossEl.innerText = parseFloat(activeLoss).toFixed(4);
     if (metaClientsEl)
       metaClientsEl.innerText = parseInt(currentVector.client_count, 10) || 0;
 
@@ -416,7 +425,7 @@ async function syncLiveTelemetry() {
       metricsLog = metricsLog.slice(-MAX_DATA_ROLLING_WINDOW);
     }
 
-    // Single-pass optimization layout step
+    // Single-pass optimization layout step supporting both explicit local & global keys
     const timelineLabels = [];
     const accuracyData = [];
     const lossData = [];
@@ -426,10 +435,23 @@ async function syncLiveTelemetry() {
     for (let i = 0; i < metricsLog.length; i++) {
       const row = metricsLog[i];
       timelineLabels.push(`Round ${row.round_number || 0}`);
-      accuracyData.push(parseFloat(row.accuracy || 0.0));
-      lossData.push(parseFloat(row.loss || 0.0));
-      prAucData.push(parseFloat(row.pr_auc || row.local_pr_auc) || 0.0);
-      noiseData.push(parseFloat(row.noise_budget) || 0.0);
+
+      // Multi-layer dictionary checking traps variations cleanly
+      const mappedAccuracy =
+        row.local_accuracy !== undefined
+          ? row.local_accuracy
+          : row.accuracy || 0.0;
+      const mappedLoss =
+        row.local_loss !== undefined ? row.local_loss : row.loss || 0.0;
+      const mappedPrAuc =
+        row.local_pr_auc !== undefined
+          ? row.local_pr_auc
+          : row.pr_auc || row.local_pr_auc || 0.0;
+
+      accuracyData.push(parseFloat(mappedAccuracy));
+      lossData.push(parseFloat(mappedLoss));
+      prAucData.push(parseFloat(mappedPrAuc));
+      noiseData.push(parseFloat(row.noise_budget || row.epsilon || 0.0));
     }
 
     if (dashboardCharts.convergence) {
