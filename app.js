@@ -363,12 +363,22 @@ async function syncLiveTelemetry() {
         'SYSTEM MONITOR: <span class="status-online">SYNCHRONIZED WITH ORCHESTRATOR</span>';
 
     const payload = await res.json();
-    const metricsLog = payload.rounds;
+    let metricsLog = payload.rounds;
     if (!Array.isArray(metricsLog) || metricsLog.length === 0) return;
 
-    // Isolate latest state vector using explicit backend keys
+    // FIXED: Maps to row.round_number based on your exact CSV column headers
+    metricsLog.sort((a, b) => {
+      const roundA = parseInt(a.round_number || a.round_num || 0, 10);
+      const roundB = parseInt(b.round_number || b.round_num || 0, 10);
+      return roundA - roundB;
+    });
+
+    // Isolate true latest state vector at the tail index
     const currentVector = metricsLog[metricsLog.length - 1];
-    const activeRound = parseInt(currentVector.round_num, 10);
+    const activeRound = parseInt(
+      currentVector.round_number || currentVector.round_num || 0,
+      10,
+    );
 
     // Populate primary text metrics safely
     document.getElementById("meta-round").innerText = `R: ${activeRound}`;
@@ -380,7 +390,7 @@ async function syncLiveTelemetry() {
     document.getElementById("meta-clients").innerText =
       parseInt(currentVector.client_count, 10) || 0;
 
-    // Fixed: Progress Bar scales linearly to match total overall workflow milestones cleanly
+    // Progress Bar linear scale modifier
     const percentageScale = Math.min(
       (activeRound / TOTAL_EXPECTED_ROUNDS) * 100,
       100,
@@ -405,8 +415,10 @@ async function syncLiveTelemetry() {
       processedLogs = processedLogs.slice(-MAX_DATA_ROLLING_WINDOW);
     }
 
-    // Explicitly construct labels matching backend data rows across all chart scales
-    const timelineLabels = processedLogs.map((row) => `Round ${row.round_num}`);
+    // Explicitly construct labels matching your CSV schema layout
+    const timelineLabels = processedLogs.map(
+      (row) => `Round ${row.round_number || row.round_num}`,
+    );
 
     // Update Chart 01: Training convergence limits
     dashboardCharts.convergence.data.labels = timelineLabels;
@@ -418,7 +430,7 @@ async function syncLiveTelemetry() {
     );
     dashboardCharts.convergence.update("none");
 
-    // Update Chart 02: AUPR Timeline Mapping (Linked to encryption_time_ms storage position)
+    // Update Chart 02: AUPR Timeline Mapping (encryption_time_ms tracking profile)
     dashboardCharts.securityTax.data.labels = timelineLabels;
     dashboardCharts.securityTax.data.datasets[0].data = processedLogs.map(
       (row) => parseFloat(row.encryption_time_ms) || 0.0,
