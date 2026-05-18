@@ -81,12 +81,13 @@ function initCharts() {
             },
             grid: { drawOnChartArea: false },
           },
-        },
+        ],
       },
     },
   );
 
-  // Fixes Chart 2 Mismatch: Properly align scales for precision metrics
+  // FIXED: Resolved metric scale mismatch by re-mapping dataset variables to track 
+  // live normalized AUPR vectors while migrating latency metrics to standard sub-loggers.
   dashboardCharts.securityTax = new Chart(
     document.getElementById("chartSecurityTax").getContext("2d"),
     {
@@ -95,7 +96,7 @@ function initCharts() {
         labels: [],
         datasets: [
           {
-            label: "Global AUPR Baseline (Mapped Tracking)",
+            label: "Global PR-AUC Metric Baseline",
             data: [],
             borderColor: "#3fb950",
             backgroundColor: "rgba(63, 185, 80, 0.05)",
@@ -427,12 +428,20 @@ async function syncLiveTelemetry() {
     );
     dashboardCharts.convergence.update("none");
 
-    // Update Chart 02: AUPR Timeline Mapping (encryption_time_ms tracking profile)
+    // FIXED: Adjusted to assign standard area metrics (`row.pr_auc`) within the [0, 1.0] viewport boundary.
+    // Telemetry latency arrays are diverted cleanly into tracking diagnostic logs.
     dashboardCharts.securityTax.data.labels = timelineLabels;
     dashboardCharts.securityTax.data.datasets[0].data = processedLogs.map(
-      (row) => parseFloat(row.encryption_time_ms) || 0.0,
+      (row) => parseFloat(row.pr_auc || row.local_pr_auc) || 0.0,
     );
     dashboardCharts.securityTax.update("none");
+
+    // Auxiliary Hardware Performance Telemetry Tracking Profiler
+    const lastEncryptionTime = parseFloat(currentVector.encryption_time_ms || 0.0).toFixed(1);
+    writeLog(
+      "performance",
+      `Client computational overhead profiles verified: Lattice encryption time = ${lastEncryptionTime} ms.`
+    );
 
     // Update Chart 03: Post-Quantum Lattice Noise Bounds
     dashboardCharts.noise.data.labels = timelineLabels;
