@@ -5,6 +5,8 @@
  */
 
 const API_URL = "https://pq-federated-coordinator-v3.onrender.com";
+const AUTH_TOKEN = "pq-fed-auth-token";
+
 const UPDATE_INTERVAL_MS = 6000;
 const MAX_DATA_ROLLING_WINDOW = 50; // Strict sliding memory ceiling constraint
 const TOTAL_EXPECTED_ROUNDS = 20; // Normalizes progress bar to absolute system constraints
