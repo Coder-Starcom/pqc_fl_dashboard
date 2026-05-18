@@ -1,6 +1,7 @@
 /**
  * Hardened Production Dashboard Control Engine
- * Addresses: Chart.js Memory Leak Caps, Scale Mismatch Resiliency, and Safe Degradation
+ * Refactored to align seamlessly with FastAPIs /metrics explicit dictionary schema.
+ * Addresses: Chart.js Memory Leak Caps, Scale Mismatch Resiliency, and Safe Degradation.
  */
 
 const API_URL =
@@ -91,7 +92,7 @@ function initCharts() {
         labels: [],
         datasets: [
           {
-            label: "Global AUPR Baseline",
+            label: "Global AUPR Baseline (Mapped Tracking)",
             data: [],
             borderColor: "#3fb950",
             backgroundColor: "rgba(63, 185, 80, 0.05)",
@@ -106,7 +107,7 @@ function initCharts() {
         maintainAspectRatio: false,
         scales: {
           y: {
-            beginAtZero: true, // Dynamically handle latencies instead of clipping at 0.1
+            beginAtZero: true,
             title: {
               display: true,
               text: "AUPR Score",
@@ -267,7 +268,6 @@ function initCharts() {
   );
 }
 
-// JSON Loaders with strict structural fallback assertions (Omitting long static arrays for space)
 async function loadStaticJSONPlots() {
   try {
     const res = await fetch("plots_data_smote.json");
@@ -362,27 +362,30 @@ async function syncLiveTelemetry() {
     const metricsLog = payload.rounds;
     if (!Array.isArray(metricsLog) || metricsLog.length === 0) return;
 
+    // Isolate latest state vector using explicit backend keys
     const currentVector = metricsLog[metricsLog.length - 1];
-    const activeRound = parseInt(
-      currentVector.round_number || currentVector.round_num,
-      10,
-    );
+    const activeRound = parseInt(currentVector.round_num, 10);
 
+    // Populate primary text metrics safely
     document.getElementById("meta-round").innerText = `R: ${activeRound}`;
     document.getElementById("meta-accuracy").innerText =
-      `${(parseFloat(currentVector.accuracy || 0.85) * 100).toFixed(1)}%`;
+      `${(parseFloat(currentVector.accuracy || 0.0) * 100).toFixed(1)}%`;
     document.getElementById("meta-loss").innerText = parseFloat(
-      currentVector.loss || 0.12,
+      currentVector.loss || 0.0,
     ).toFixed(4);
     document.getElementById("meta-clients").innerText =
-      parseInt(currentVector.client_count, 10) || 3;
+      parseInt(currentVector.client_count, 10) || 0;
 
+    // Advance timeline visual progress bar components safely
     const targetCeiling =
       activeRound > 10 ? Math.ceil(activeRound / 5) * 5 : 10;
     const percentageScale = Math.min((activeRound / targetCeiling) * 100, 100);
-    document.getElementById("round-progress").style.width =
-      `${percentageScale}%`;
+    const progressBar = document.getElementById("round-progress");
+    if (progressBar) {
+      progressBar.style.width = `${percentageScale}%`;
+    }
 
+    // Optimization check: Skip rendering pipeline recalculations if state has not mutated
     if (activeRound === lastKnownRound) return;
     lastKnownRound = activeRound;
 
@@ -391,35 +394,36 @@ async function syncLiveTelemetry() {
       `Inbound verification validation passed for round ${activeRound}. Mutating timeline.`,
     );
 
-    // Enforce sliding FIFO window memory allocation bounds to prevent leaks
+    // Enforce sliding FIFO window memory allocation bounds to prevent ChartJS canvas leaks
     let processedLogs = metricsLog;
     if (processedLogs.length > MAX_DATA_ROLLING_WINDOW) {
       processedLogs = processedLogs.slice(-MAX_DATA_ROLLING_WINDOW);
     }
 
-    const timelineLabels = processedLogs.map(
-      (row) => `Round ${row.round_number || row.round_num}`,
-    );
+    // Explicitly construct labels matching backend data rows
+    const timelineLabels = processedLogs.map((row) => `Round ${row.round_num}`);
 
-    // Safely update structured arrays
+    // Update Chart 01: Training convergence limits
     dashboardCharts.convergence.data.labels = timelineLabels;
     dashboardCharts.convergence.data.datasets[0].data = processedLogs.map(
-      (row) => parseFloat(row.accuracy || 0.85),
+      (row) => parseFloat(row.accuracy || 0.0),
     );
     dashboardCharts.convergence.data.datasets[1].data = processedLogs.map(
-      (row) => parseFloat(row.loss || 0.12),
+      (row) => parseFloat(row.loss || 0.0),
     );
     dashboardCharts.convergence.update("none");
 
+    // Update Chart 02: AUPR Timeline Mapping (Linked to encryption_time_ms storage position)
     dashboardCharts.securityTax.data.labels = timelineLabels;
     dashboardCharts.securityTax.data.datasets[0].data = processedLogs.map(
-      (row) => parseFloat(row.encryption_time_ms) || 0,
+      (row) => parseFloat(row.encryption_time_ms) || 0.0,
     );
     dashboardCharts.securityTax.update("none");
 
+    // Update Chart 03: Post-Quantum Lattice Noise Bounds
     dashboardCharts.noise.data.labels = timelineLabels;
     dashboardCharts.noise.data.datasets[0].data = processedLogs.map(
-      (row) => parseFloat(row.noise_budget) || 0,
+      (row) => parseFloat(row.noise_budget) || 0.0,
     );
     dashboardCharts.noise.update("none");
 
