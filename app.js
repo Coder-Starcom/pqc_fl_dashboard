@@ -368,17 +368,14 @@ async function syncLiveTelemetry() {
 
     // FIXED: Maps to row.round_number based on your exact CSV column headers
     metricsLog.sort((a, b) => {
-      const roundA = parseInt(a.round_number || a.round_num || 0, 10);
-      const roundB = parseInt(b.round_number || b.round_num || 0, 10);
+      const roundA = parseInt(a.round_number || 0, 10);
+      const roundB = parseInt(b.round_number || 0, 10);
       return roundA - roundB;
     });
 
     // Isolate true latest state vector at the tail index
     const currentVector = metricsLog[metricsLog.length - 1];
-    const activeRound = parseInt(
-      currentVector.round_number || currentVector.round_num || 0,
-      10,
-    );
+    const activeRound = parseInt(currentVector.round_number || 0, 10);
 
     // Populate primary text metrics safely
     document.getElementById("meta-round").innerText = `R: ${activeRound}`;
@@ -417,7 +414,7 @@ async function syncLiveTelemetry() {
 
     // Explicitly construct labels matching your CSV schema layout
     const timelineLabels = processedLogs.map(
-      (row) => `Round ${row.round_number || row.round_num}`,
+      (row) => `Round ${row.round_number || 0}`,
     );
 
     // Update Chart 01: Training convergence limits
