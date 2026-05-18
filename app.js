@@ -97,7 +97,7 @@ function initCharts() {
         labels: [],
         datasets: [
           {
-            label: "Global PR-AUC Metric Baseline",
+            label: "Global AUPRC Metric Baseline",
             data: [],
             borderColor: "#3fb950",
             backgroundColor: "rgba(63, 185, 80, 0.05)",
@@ -116,7 +116,7 @@ function initCharts() {
             max: 1.0,
             title: {
               display: true,
-              text: "AUPR Score / Metric Value",
+              text: "AUPRC Score / Metric Value",
               color: "#8b949e",
             },
           },
@@ -344,7 +344,6 @@ async function syncLiveTelemetry() {
   try {
     const statusHeader = document.getElementById("connection-status");
 
-    // FIXES 401: Explicitly forwards the expected authorization credential vector
     const response = await fetch(`${API_URL}/metrics`, {
       method: "GET",
       headers: {
@@ -384,17 +383,12 @@ async function syncLiveTelemetry() {
     const metaLossEl = document.getElementById("meta-loss");
     const metaClientsEl = document.getElementById("meta-clients");
 
-    // Target fallback mapping structures across dynamic schemas
+    // Unified backend API parameter mappings
     const activeAccuracy =
-      currentVector.local_accuracy !== undefined
-        ? currentVector.local_accuracy
-        : currentVector.accuracy || 0.0;
+      currentVector.accuracy !== undefined ? currentVector.accuracy : 0.0;
     const activeLoss =
-      currentVector.local_loss !== undefined
-        ? currentVector.local_loss
-        : currentVector.loss || 0.0;
+      currentVector.loss !== undefined ? currentVector.loss : 0.0;
 
-    // Formats precisely to track relative completion ceilings safely
     if (metaRoundEl)
       metaRoundEl.innerText = `R: ${activeRound} / ${TOTAL_EXPECTED_ROUNDS}`;
     if (metaAccuracyEl)
@@ -425,7 +419,6 @@ async function syncLiveTelemetry() {
       metricsLog = metricsLog.slice(-MAX_DATA_ROLLING_WINDOW);
     }
 
-    // Single-pass optimization layout step supporting both explicit local & global keys
     const timelineLabels = [];
     const accuracyData = [];
     const lossData = [];
@@ -436,17 +429,9 @@ async function syncLiveTelemetry() {
       const row = metricsLog[i];
       timelineLabels.push(`Round ${row.round_number || 0}`);
 
-      // Multi-layer dictionary checking traps variations cleanly
-      const mappedAccuracy =
-        row.local_accuracy !== undefined
-          ? row.local_accuracy
-          : row.accuracy || 0.0;
-      const mappedLoss =
-        row.local_loss !== undefined ? row.local_loss : row.loss || 0.0;
-      const mappedPrAuc =
-        row.local_pr_auc !== undefined
-          ? row.local_pr_auc
-          : row.pr_auc || row.local_pr_auc || 0.0;
+      const mappedAccuracy = row.accuracy !== undefined ? row.accuracy : 0.0;
+      const mappedLoss = row.loss !== undefined ? row.loss : 0.0;
+      const mappedPrAuc = row.pr_auc !== undefined ? row.pr_auc : 0.0;
 
       accuracyData.push(parseFloat(mappedAccuracy));
       lossData.push(parseFloat(mappedLoss));
