@@ -81,12 +81,12 @@ function initCharts() {
             },
             grid: { drawOnChartArea: false },
           },
-        ],
+        },
       },
     },
   );
 
-  // FIXED: Resolved metric scale mismatch by re-mapping dataset variables to track 
+  // FIXED: Resolved metric scale mismatch by re-mapping dataset variables to track
   // live normalized AUPR vectors while migrating latency metrics to standard sub-loggers.
   dashboardCharts.securityTax = new Chart(
     document.getElementById("chartSecurityTax").getContext("2d"),
@@ -437,10 +437,12 @@ async function syncLiveTelemetry() {
     dashboardCharts.securityTax.update("none");
 
     // Auxiliary Hardware Performance Telemetry Tracking Profiler
-    const lastEncryptionTime = parseFloat(currentVector.encryption_time_ms || 0.0).toFixed(1);
+    const lastEncryptionTime = parseFloat(
+      currentVector.encryption_time_ms || 0.0,
+    ).toFixed(1);
     writeLog(
       "performance",
-      `Client computational overhead profiles verified: Lattice encryption time = ${lastEncryptionTime} ms.`
+      `Client computational overhead profiles verified: Lattice encryption time = ${lastEncryptionTime} ms.`,
     );
 
     // Update Chart 03: Post-Quantum Lattice Noise Bounds
