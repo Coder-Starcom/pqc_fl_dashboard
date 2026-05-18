@@ -4,8 +4,7 @@
  * Addresses: Chart.js Memory Leak Caps, Scale Mismatch Resiliency, and Safe Degradation.
  */
 
-// Production API Base Routing Hook configured for Netlify Edge Proxies
-const API_URL = "/api";
+const API_URL = "https://pq-federated-coordinator-v3.onrender.com";
 const UPDATE_INTERVAL_MS = 6000;
 const MAX_DATA_ROLLING_WINDOW = 50; // Strict sliding memory ceiling constraint
 const TOTAL_EXPECTED_ROUNDS = 20; // Normalizes progress bar to absolute system constraints
