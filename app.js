@@ -10,6 +10,7 @@ const API_URL =
 const AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
 const UPDATE_INTERVAL_MS = 6000;
 const MAX_DATA_ROLLING_WINDOW = 50; // Fixes Q43: Strict sliding memory ceiling constraint
+const TOTAL_EXPECTED_ROUNDS = 20; // Normalizes progress bar to absolute system constraints
 
 let lastKnownRound = -1;
 
@@ -66,11 +67,13 @@ function initCharts() {
         scales: {
           yAcc: {
             beginAtZero: true,
+            max: 1.0,
             position: "left",
             title: { display: true, text: "Val Accuracy", color: "#8b949e" },
           },
           yLoss: {
             position: "right",
+            beginAtZero: true,
             title: {
               display: true,
               text: "Cross-Entropy Loss",
@@ -83,7 +86,7 @@ function initCharts() {
     },
   );
 
-  // Fixes Chart 2 Mismatch: Properly align labels, titles, and metrics
+  // Fixes Chart 2 Mismatch: Properly align scales for precision metrics
   dashboardCharts.securityTax = new Chart(
     document.getElementById("chartSecurityTax").getContext("2d"),
     {
@@ -108,9 +111,10 @@ function initCharts() {
         scales: {
           y: {
             beginAtZero: true,
+            max: 1.0, // Bounds tracking limits strictly to standard metric normalization
             title: {
               display: true,
-              text: "AUPR Score",
+              text: "AUPR Score / Metric Value",
               color: "#8b949e",
             },
           },
@@ -376,10 +380,11 @@ async function syncLiveTelemetry() {
     document.getElementById("meta-clients").innerText =
       parseInt(currentVector.client_count, 10) || 0;
 
-    // Advance timeline visual progress bar components safely
-    const targetCeiling =
-      activeRound > 10 ? Math.ceil(activeRound / 5) * 5 : 10;
-    const percentageScale = Math.min((activeRound / targetCeiling) * 100, 100);
+    // Fixed: Progress Bar scales linearly to match total overall workflow milestones cleanly
+    const percentageScale = Math.min(
+      (activeRound / TOTAL_EXPECTED_ROUNDS) * 100,
+      100,
+    );
     const progressBar = document.getElementById("round-progress");
     if (progressBar) {
       progressBar.style.width = `${percentageScale}%`;
@@ -400,7 +405,7 @@ async function syncLiveTelemetry() {
       processedLogs = processedLogs.slice(-MAX_DATA_ROLLING_WINDOW);
     }
 
-    // Explicitly construct labels matching backend data rows
+    // Explicitly construct labels matching backend data rows across all chart scales
     const timelineLabels = processedLogs.map((row) => `Round ${row.round_num}`);
 
     // Update Chart 01: Training convergence limits
