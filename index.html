@@ -5,7 +5,7 @@
     <!-- Content Security Policy: Mitigates XSS or unauthorized data exfiltration -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://pq-federated-coordinator-v3.onrender.com;"
+      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://pq-federated-coordinator-v3.onrender.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Post-Quantum Federated Learning Hub</title>
@@ -19,119 +19,115 @@
     <script src="app.js" defer></script>
   </head>
   <body>
-    <h1 class="title">PQC FEDERATED FRAUD MONITOR</h1>
-    <div class="subtitle" id="connection-status">
-      SYSTEM MONITOR:
-      <span class="status-online">CONNECTING TO COORDINATOR</span>
-    </div>
-
-    <div class="grid status-grid">
-      <!-- Card 1: Orchestrator Sequence Tracking -->
-      <div class="card">
-        <h2>Orchestrator Sequence</h2>
-        <div class="value" id="meta-round">R: -- / 10</div>
-        <div
-          class="progress-container"
-          aria-label="Federated training round progress"
-        >
-          <div class="progress-bar" id="round-progress" style="width: 0%"></div>
-        </div>
-        <div
-          class="core-badge"
-          style="
-            border-color: rgba(188, 140, 255, 0.4);
-            color: var(--pqc);
-            background: rgba(188, 140, 255, 0.05);
-          "
-        >
-          LATTICE IDENTITY CHECK VERIFIED
-        </div>
+    <main>
+      <h1 class="title">PQC FEDERATED FRAUD MONITOR</h1>
+      <div class="subtitle" id="connection-status">
+        SYSTEM MONITOR:
+        <span class="status-online">CONNECTING TO COORDINATOR</span>
       </div>
 
-      <!-- Card 2: Core ML Optimization Metrics -->
-      <div class="card">
-        <h2>Current Global Metrics</h2>
-        <div class="value" id="meta-accuracy">--%</div>
-        <div class="metric subtlety">
-          Current Cross-Entropy Loss:
-          <span class="value-inline" id="meta-loss">--</span>
-        </div>
-        <div class="metric subtle" id="meta-clients">
-          Connected Clients: -- active nodes
-        </div>
-      </div>
-
-      <!-- Card 3: Cryptographic Parameter Synchronization Vector -->
-      <!-- FIXES Q11 Mismatch: Explicitly aligns visible parameters with active RLWE engine -->
-      <div class="card">
-        <h2>Ring-LWE Scheme Properties</h2>
-        <div
-          class="value"
-          style="font-size: 36px; padding: 12px 0; color: var(--pqc)"
-        >
-          N = 512
-        </div>
-        <div class="metric subtle">
-          Modulus Dimension:
-          <span class="value-inline" style="color: var(--pqc)"
-            >q = 8,380,417</span
+      <div class="grid status-grid">
+        <!-- Card 1: Orchestrator Sequence Tracking -->
+        <section class="card" aria-labelledby="heading-sequence">
+          <h2 id="heading-sequence">Orchestrator Sequence</h2>
+          <div class="value" id="meta-round">R: -- / 10</div>
+          <div
+            class="progress-container"
+            aria-label="Federated training round progress"
           >
-        </div>
-        <div class="metric subtle">
-          Error Distribution Bound:
-          <span class="value-inline" style="color: var(--pqc)"
-            >&sigma; = 3.2</span
-          >
-        </div>
+            <div
+              class="progress-bar"
+              id="round-progress"
+              style="width: 0%"
+            ></div>
+          </div>
+          <div class="core-badge verification-badge">
+            LATTICE IDENTITY CHECK VERIFIED
+          </div>
+        </section>
+
+        <!-- Card 2: Core ML Optimization Metrics -->
+        <section class="card" aria-labelledby="heading-metrics">
+          <h2 id="heading-metrics">Current Global Metrics</h2>
+          <div class="value" id="meta-accuracy">--%</div>
+          <p class="metric subtlety">
+            Current Cross-Entropy Loss:
+            <span class="value-inline" id="meta-loss">--</span>
+          </p>
+          <p class="metric subtle" id="meta-clients">
+            Connected Clients: -- active nodes
+          </p>
+        </section>
+
+        <!-- Card 3: Cryptographic Parameter Synchronization Vector -->
+        <!-- FIXES Q11 Mismatch: Explicitly aligns visible parameters with active RLWE engine -->
+        <section class="card" aria-labelledby="heading-properties">
+          <h2 id="heading-properties">Ring-LWE Scheme Properties</h2>
+          <div class="value crypt-metric">N = 512</div>
+          <p class="metric subtle">
+            Modulus Dimension:
+            <span class="value-inline crypt-highlight">q = 8,380,417</span>
+          </p>
+          <p class="metric subtle">
+            Error Distribution Bound:
+            <span class="value-inline crypt-highlight">&sigma; = 3.2</span>
+          </p>
+        </section>
       </div>
-    </div>
 
-    <!-- Live Performance Visualizer Grids -->
-    <div class="charts-section">
-      <div class="section-heading">Engine Diagnostic Tracking Layers</div>
-      <div class="charts-grid">
-        <div class="card chart-card">
-          <h3>Plot 02: Real-time Convergence Horizon</h3>
-          <canvas id="chartConvergence"></canvas>
+      <!-- Live Performance Visualizer Grids -->
+      <section class="charts-section" aria-labelledby="heading-diagnostics">
+        <div class="section-heading" id="heading-diagnostics">
+          Engine Diagnostic Tracking Layers
         </div>
+        <div class="charts-grid">
+          <div class="card chart-card">
+            <h3>Plot 02: Real-time Convergence Horizon</h3>
+            <canvas id="chartConvergence"></canvas>
+          </div>
 
-        <!-- Card for Plot 03: Precision-Recall Profile -->
-        <div class="card chart-card">
-          <h3>Plot 03: Area Under Precision-Recall Curve (AUPR)</h3>
-          <canvas id="chartSecurityTax"></canvas>
+          <!-- Card for Plot 03: Precision-Recall Profile -->
+          <div class="card chart-card">
+            <h3>Plot 03: Area Under Precision-Recall Curve (AUPR)</h3>
+            <canvas id="chartSecurityTax"></canvas>
+          </div>
+
+          <div class="card chart-card">
+            <h3>Plot 06: Lattice Noise Budget Horizon</h3>
+            <canvas id="chartNoise"></canvas>
+          </div>
+
+          <div class="card chart-card">
+            <h3>Plot 07: SMOTE Class Imbalance Lift Profile</h3>
+            <canvas id="chartSmote"></canvas>
+          </div>
+
+          <div class="card chart-card">
+            <h3>Plot 09: Differential Privacy Utility Bounds</h3>
+            <canvas id="chartDpTradeoff"></canvas>
+          </div>
+
+          <div class="card chart-card">
+            <h3>Plot 10: Cryptographic Weight Entropy (Blindness)</h3>
+            <canvas id="chartEntropy"></canvas>
+          </div>
         </div>
+      </section>
 
-        <div class="card chart-card">
-          <h3>Plot 06: Lattice Noise Budget Horizon</h3>
-          <canvas id="chartNoise"></canvas>
+      <!-- Live Terminal Simulator Output Window -->
+      <section
+        class="log-container"
+        id="terminalLog"
+        aria-label="System Terminal Logs"
+      >
+        <div class="log-entry">
+          [SYSTEM REBOOT] Initializing primary Ring-LWE coordination nodes...
         </div>
-
-        <div class="card chart-card">
-          <h3>Plot 07: SMOTE Class Imbalance Lift Profile</h3>
-          <canvas id="chartSmote"></canvas>
+        <div class="log-entry">
+          [NETWORK AUTH] System token matching established safely using baseline
+          secrets.
         </div>
-
-        <div class="card chart-card">
-          <h3>Plot 09: Differential Privacy Utility Bounds</h3>
-          <canvas id="chartDpTradeoff"></canvas>
-        </div>
-
-        <div class="card chart-card">
-          <h3>Plot 10: Cryptographic Weight Entropy (Blindness)</h3>
-          <canvas id="chartEntropy"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Live Terminal Simulator Output Window -->
-    <div class="log-container" id="terminalLog">
-      <div class="log-entry">
-        [SYSTEM REBOOT] Initializing primary Ring-LWE coordination nodes...
-      </div>
-      <div class="log-entry">
-        [NETWORK AUTH] System token matching established safely using baseline
-        secrets.
-      </div>
-    </div>
+      </section>
+    </main>
   </body>
 </html>

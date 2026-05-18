@@ -35,9 +35,11 @@ function writeLog(subSystem, text) {
 }
 
 function initCharts() {
-  dashboardCharts.convergence = new Chart(
-    document.getElementById("chartConvergence").getContext("2d"),
-    {
+  const chartConvergenceCtx = document
+    .getElementById("chartConvergence")
+    ?.getContext("2d");
+  if (chartConvergenceCtx) {
+    dashboardCharts.convergence = new Chart(chartConvergenceCtx, {
       type: "line",
       data: {
         labels: [],
@@ -83,14 +85,16 @@ function initCharts() {
           },
         },
       },
-    },
-  );
+    });
+  }
 
   // FIXED: Resolved metric scale mismatch by re-mapping dataset variables to track
   // live normalized AUPR vectors while migrating latency metrics to standard sub-loggers.
-  dashboardCharts.securityTax = new Chart(
-    document.getElementById("chartSecurityTax").getContext("2d"),
-    {
+  const chartSecurityTaxCtx = document
+    .getElementById("chartSecurityTax")
+    ?.getContext("2d");
+  if (chartSecurityTaxCtx) {
+    dashboardCharts.securityTax = new Chart(chartSecurityTaxCtx, {
       type: "line",
       data: {
         labels: [],
@@ -121,12 +125,12 @@ function initCharts() {
           },
         },
       },
-    },
-  );
+    });
+  }
 
-  dashboardCharts.noise = new Chart(
-    document.getElementById("chartNoise").getContext("2d"),
-    {
+  const chartNoiseCtx = document.getElementById("chartNoise")?.getContext("2d");
+  if (chartNoiseCtx) {
+    dashboardCharts.noise = new Chart(chartNoiseCtx, {
       type: "line",
       data: {
         labels: [],
@@ -156,13 +160,13 @@ function initCharts() {
           },
         },
       },
-    },
-  );
+    });
+  }
 
   // Initialize Static Comparison Charts (SMOTE, DP, Entropy)
-  dashboardCharts.smote = new Chart(
-    document.getElementById("chartSmote").getContext("2d"),
-    {
+  const chartSmoteCtx = document.getElementById("chartSmote")?.getContext("2d");
+  if (chartSmoteCtx) {
+    dashboardCharts.smote = new Chart(chartSmoteCtx, {
       type: "bar",
       data: {
         labels: ["Federated Vanilla Base", "Federated SMOTE Enhanced"],
@@ -189,12 +193,14 @@ function initCharts() {
           },
         },
       },
-    },
-  );
+    });
+  }
 
-  dashboardCharts.differentialPrivacy = new Chart(
-    document.getElementById("chartDpTradeoff").getContext("2d"),
-    {
+  const chartDpTradeoffCtx = document
+    .getElementById("chartDpTradeoff")
+    ?.getContext("2d");
+  if (chartDpTradeoffCtx) {
+    dashboardCharts.differentialPrivacy = new Chart(chartDpTradeoffCtx, {
       type: "line",
       data: {
         labels: [
@@ -229,12 +235,14 @@ function initCharts() {
           },
         },
       },
-    },
-  );
+    });
+  }
 
-  dashboardCharts.entropyHistogram = new Chart(
-    document.getElementById("chartEntropy").getContext("2d"),
-    {
+  const chartEntropyCtx = document
+    .getElementById("chartEntropy")
+    ?.getContext("2d");
+  if (chartEntropyCtx) {
+    dashboardCharts.entropyHistogram = new Chart(chartEntropyCtx, {
       type: "bar",
       data: {
         labels: Array.from({ length: 20 }, (_, i) => `B${i + 1}`),
@@ -269,63 +277,70 @@ function initCharts() {
           },
         },
       },
-    },
-  );
+    });
+  }
 }
 
 async function loadStaticJSONPlots() {
-  try {
-    const res = await fetch("plots_data_smote.json");
-    if (res.ok) {
-      const data = await res.json();
-      dashboardCharts.smote.data.datasets[0].data = [
-        parseFloat(data.vanilla_recall || 0.57),
-        parseFloat(data.smote_recall || 0.79),
+  if (dashboardCharts.smote) {
+    try {
+      const res = await fetch("plots_data_smote.json");
+      if (res.ok) {
+        const data = await res.json();
+        dashboardCharts.smote.data.datasets[0].data = [
+          parseFloat(data.vanilla_recall || 0.57),
+          parseFloat(data.smote_recall || 0.79),
+        ];
+        dashboardCharts.smote.update("none");
+        writeLog("storage", "Mapped local SMOTE class imbalance lift vectors.");
+      }
+    } catch (e) {
+      dashboardCharts.smote.data.datasets[0].data = [0.57, 0.79];
+      dashboardCharts.smote.update("none");
+    }
+  }
+
+  if (dashboardCharts.differentialPrivacy) {
+    try {
+      const res = await fetch("plots_data_dp.json");
+      if (res.ok) {
+        const data = await res.json();
+        dashboardCharts.differentialPrivacy.data.datasets[0].data =
+          data.utility_curve || [0.71, 0.84, 0.93];
+        dashboardCharts.differentialPrivacy.update("none");
+      }
+    } catch (e) {
+      dashboardCharts.differentialPrivacy.data.datasets[0].data = [
+        0.71, 0.84, 0.93,
       ];
-      dashboardCharts.smote.update();
-      writeLog("storage", "Mapped local SMOTE class imbalance lift vectors.");
+      dashboardCharts.differentialPrivacy.update("none");
     }
-  } catch (e) {
-    dashboardCharts.smote.data.datasets[0].data = [0.57, 0.79];
-    dashboardCharts.smote.update();
   }
 
-  try {
-    const res = await fetch("plots_data_dp.json");
-    if (res.ok) {
-      const data = await res.json();
-      dashboardCharts.differentialPrivacy.data.datasets[0].data =
-        data.utility_curve || [0.71, 0.84, 0.93];
-      dashboardCharts.differentialPrivacy.update();
-    }
-  } catch (e) {
-    dashboardCharts.differentialPrivacy.data.datasets[0].data = [
-      0.71, 0.84, 0.93,
-    ];
-    dashboardCharts.differentialPrivacy.update();
-  }
-
-  try {
-    const res = await fetch("plots_data_entropy.json");
-    if (res.ok) {
-      const data = await res.json();
-      dashboardCharts.entropyHistogram.data.datasets[0].data =
-        data.plaintext_gaussian_bins || [
-          1, 3, 8, 18, 35, 50, 68, 50, 35, 18, 8, 3, 1, 0, 0, 0, 0, 0, 0, 0,
-        ];
+  if (dashboardCharts.entropyHistogram) {
+    try {
+      const res = await fetch("plots_data_entropy.json");
+      if (res.ok) {
+        const data = await res.json();
+        dashboardCharts.entropyHistogram.data.datasets[0].data =
+          data.plaintext_gaussian_bins || [
+            1, 3, 8, 18, 35, 50, 68, 50, 35, 18, 8, 3, 1, 0, 0, 0, 0, 0, 0, 0,
+          ];
+        dashboardCharts.entropyHistogram.data.datasets[1].data =
+          data.ciphertext_uniform_bins || [
+            15, 14, 16, 15, 15, 14, 15, 16, 15, 14, 15, 16, 15, 15, 14, 15, 16,
+            15, 14, 15,
+          ];
+        dashboardCharts.entropyHistogram.update("none");
+      }
+    } catch (e) {
+      dashboardCharts.entropyHistogram.data.datasets[0].data = [
+        2, 5, 12, 28, 55, 84, 95, 84, 55, 28, 12, 5, 2, 0, 0, 0, 0, 0, 0, 0,
+      ];
       dashboardCharts.entropyHistogram.data.datasets[1].data =
-        data.ciphertext_uniform_bins || [
-          15, 14, 16, 15, 15, 14, 15, 16, 15, 14, 15, 16, 15, 15, 14, 15, 16,
-          15, 14, 15,
-        ];
-      dashboardCharts.entropyHistogram.update();
+        Array(20).fill(23);
+      dashboardCharts.entropyHistogram.update("none");
     }
-  } catch (e) {
-    dashboardCharts.entropyHistogram.data.datasets[0].data = [
-      2, 5, 12, 28, 55, 84, 95, 84, 55, 28, 12, 5, 2, 0, 0, 0, 0, 0, 0, 0,
-    ];
-    dashboardCharts.entropyHistogram.data.datasets[1].data = Array(20).fill(23);
-    dashboardCharts.entropyHistogram.update();
   }
 }
 
@@ -379,14 +394,18 @@ async function syncLiveTelemetry() {
     const activeRound = parseInt(currentVector.round_number || 0, 10);
 
     // Populate primary text metrics safely
-    document.getElementById("meta-round").innerText = `R: ${activeRound}`;
-    document.getElementById("meta-accuracy").innerText =
-      `${(parseFloat(currentVector.accuracy || 0.0) * 100).toFixed(1)}%`;
-    document.getElementById("meta-loss").innerText = parseFloat(
-      currentVector.loss || 0.0,
-    ).toFixed(4);
-    document.getElementById("meta-clients").innerText =
-      parseInt(currentVector.client_count, 10) || 0;
+    const metaRoundEl = document.getElementById("meta-round");
+    const metaAccuracyEl = document.getElementById("meta-accuracy");
+    const metaLossEl = document.getElementById("meta-loss");
+    const metaClientsEl = document.getElementById("meta-clients");
+
+    if (metaRoundEl) metaRoundEl.innerText = `R: ${activeRound}`;
+    if (metaAccuracyEl)
+      metaAccuracyEl.innerText = `${(parseFloat(currentVector.accuracy || 0.0) * 100).toFixed(1)}%`;
+    if (metaLossEl)
+      metaLossEl.innerText = parseFloat(currentVector.loss || 0.0).toFixed(4);
+    if (metaClientsEl)
+      metaClientsEl.innerText = parseInt(currentVector.client_count, 10) || 0;
 
     // Progress Bar linear scale modifier
     const percentageScale = Math.min(
@@ -419,22 +438,25 @@ async function syncLiveTelemetry() {
     );
 
     // Update Chart 01: Training convergence limits
-    dashboardCharts.convergence.data.labels = timelineLabels;
-    dashboardCharts.convergence.data.datasets[0].data = processedLogs.map(
-      (row) => parseFloat(row.accuracy || 0.0),
-    );
-    dashboardCharts.convergence.data.datasets[1].data = processedLogs.map(
-      (row) => parseFloat(row.loss || 0.0),
-    );
-    dashboardCharts.convergence.update("none");
+    if (dashboardCharts.convergence) {
+      dashboardCharts.convergence.data.labels = timelineLabels;
+      dashboardCharts.convergence.data.datasets[0].data = processedLogs.map(
+        (row) => parseFloat(row.accuracy || 0.0),
+      );
+      dashboardCharts.convergence.data.datasets[1].data = processedLogs.map(
+        (row) => parseFloat(row.loss || 0.0),
+      );
+      dashboardCharts.convergence.update("none");
+    }
 
     // FIXED: Adjusted to assign standard area metrics (`row.pr_auc`) within the [0, 1.0] viewport boundary.
-    // Telemetry latency arrays are diverted cleanly into tracking diagnostic logs.
-    dashboardCharts.securityTax.data.labels = timelineLabels;
-    dashboardCharts.securityTax.data.datasets[0].data = processedLogs.map(
-      (row) => parseFloat(row.pr_auc || row.local_pr_auc) || 0.0,
-    );
-    dashboardCharts.securityTax.update("none");
+    if (dashboardCharts.securityTax) {
+      dashboardCharts.securityTax.data.labels = timelineLabels;
+      dashboardCharts.securityTax.data.datasets[0].data = processedLogs.map(
+        (row) => parseFloat(row.pr_auc || row.local_pr_auc) || 0.0,
+      );
+      dashboardCharts.securityTax.update("none");
+    }
 
     // Auxiliary Hardware Performance Telemetry Tracking Profiler
     const lastEncryptionTime = parseFloat(
@@ -446,11 +468,13 @@ async function syncLiveTelemetry() {
     );
 
     // Update Chart 03: Post-Quantum Lattice Noise Bounds
-    dashboardCharts.noise.data.labels = timelineLabels;
-    dashboardCharts.noise.data.datasets[0].data = processedLogs.map(
-      (row) => parseFloat(row.noise_budget) || 0.0,
-    );
-    dashboardCharts.noise.update("none");
+    if (dashboardCharts.noise) {
+      dashboardCharts.noise.data.labels = timelineLabels;
+      dashboardCharts.noise.data.datasets[0].data = processedLogs.map(
+        (row) => parseFloat(row.noise_budget) || 0.0,
+      );
+      dashboardCharts.noise.update("none");
+    }
 
     writeLog(
       "crypto-core",
