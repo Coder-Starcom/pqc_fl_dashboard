@@ -2,130 +2,159 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Content Security Policy: Mitigates XSS or unauthorized data exfiltration -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://pq-federated-coordinator-v3.onrender.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
+      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Post-Quantum Federated Learning Hub</title>
     <link rel="stylesheet" href="style.css" />
 
-    <!-- Load Chart.js with safe deferral constraints -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 
-    <!-- FIXES Race Condition: Use defer to guarantee sequential execution without blocking HTML parsing -->
-    <script src="config.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
     <main>
-      <h1 class="title">PQC FEDERATED FRAUD MONITOR</h1>
-      <div class="subtitle" id="connection-status">
-        SYSTEM MONITOR:
-        <span class="status-online">CONNECTING TO COORDINATOR</span>
-      </div>
+      <header>
+        <h1 class="title">PQC FEDERATED FRAUD MONITOR</h1>
+        <div class="status-banner" id="connection-status">
+          SYSTEM MONITOR:
+          <span class="status-online">CONNECTING TO COORDINATOR</span>
+        </div>
+      </header>
 
-      <div class="grid status-grid">
-        <!-- Card 1: Orchestrator Sequence Tracking -->
-        <section class="card" aria-labelledby="heading-sequence">
-          <h2 id="heading-sequence">Orchestrator Sequence</h2>
-          <div class="value" id="meta-round">R: -- / 10</div>
-          <div
-            class="progress-container"
-            aria-label="Federated training round progress"
-          >
+      <div class="metrics-summary-grid">
+        <section class="stat-card" aria-labelledby="heading-sequence">
+          <h2 class="stat-label" id="heading-sequence">
+            Orchestrator Sequence
+          </h2>
+          <div class="stat-value" id="meta-round">R: -- / 20</div>
+          <div class="progress-container">
             <div
               class="progress-bar"
               id="round-progress"
+              role="progressbar"
+              aria-label="Federated training round progress"
+              aria-valuenow="0"
+              aria-valuemin="0"
+              aria-valuemax="100"
               style="width: 0%"
             ></div>
           </div>
-          <div class="core-badge verification-badge">
+          <div
+            style="
+              font-size: 0.7rem;
+              color: #3fb950;
+              font-family: monospace;
+              margin-top: 8px;
+            "
+          >
             LATTICE IDENTITY CHECK VERIFIED
           </div>
         </section>
 
-        <!-- Card 2: Core ML Optimization Metrics -->
-        <section class="card" aria-labelledby="heading-metrics">
-          <h2 id="heading-metrics">Current Global Metrics</h2>
-          <div class="value" id="meta-accuracy">--%</div>
-          <p class="metric subtlety">
-            Current Cross-Entropy Loss:
-            <span class="value-inline" id="meta-loss">--</span>
+        <section class="stat-card" aria-labelledby="heading-metrics">
+          <h2 class="stat-label" id="heading-metrics">
+            Current Global Metrics
+          </h2>
+          <div class="stat-value" id="meta-accuracy">--%</div>
+          <p class="stat-label" style="margin-top: 6px; text-transform: none">
+            Cross-Entropy Loss:
+            <span id="meta-loss" style="color: #f0f6fc; font-weight: bold"
+              >--</span
+            >
           </p>
-          <p class="metric subtle" id="meta-clients">
-            Connected Clients: -- active nodes
+          <p class="stat-label" style="margin-top: 2px; text-transform: none">
+            Active Nodes:
+            <span id="meta-clients" style="color: #f0f6fc; font-weight: bold"
+              >--</span
+            >
           </p>
         </section>
 
-        <!-- Card 3: Cryptographic Parameter Synchronization Vector -->
-        <!-- FIXES Q11 Mismatch: Explicitly aligns visible parameters with active RLWE engine -->
-        <section class="card" aria-labelledby="heading-properties">
-          <h2 id="heading-properties">Ring-LWE Scheme Properties</h2>
-          <div class="value crypt-metric">N = 512</div>
-          <p class="metric subtle">
+        <section class="stat-card" aria-labelledby="heading-properties">
+          <h2 class="stat-label" id="heading-properties">
+            Ring-LWE Scheme Properties
+          </h2>
+          <div class="stat-value" style="color: #d29922">N = 512</div>
+          <p class="stat-label" style="margin-top: 6px; text-transform: none">
             Modulus Dimension:
-            <span class="value-inline crypt-highlight">q = 8,380,417</span>
+            <span style="color: #bc8cff; font-weight: bold">q = 8,380,417</span>
           </p>
-          <p class="metric subtle">
-            Error Distribution Bound:
-            <span class="value-inline crypt-highlight">&sigma; = 3.2</span>
+          <p class="stat-label" style="margin-top: 2px; text-transform: none">
+            Error Bound:
+            <span style="color: #bc8cff; font-weight: bold">&sigma; = 3.2</span>
           </p>
         </section>
       </div>
 
-      <!-- Live Performance Visualizer Grids -->
-      <section class="charts-section" aria-labelledby="heading-diagnostics">
-        <div class="section-heading" id="heading-diagnostics">
+      <section aria-labelledby="heading-diagnostics">
+        <h2
+          class="stat-label"
+          id="heading-diagnostics"
+          style="font-size: 0.9rem; margin-bottom: 16px"
+        >
           Engine Diagnostic Tracking Layers
-        </div>
-        <div class="charts-grid">
-          <div class="card chart-card">
-            <h3>Plot 02: Real-time Convergence Horizon</h3>
-            <canvas id="chartConvergence"></canvas>
+        </h2>
+
+        <div class="dashboard-grid">
+          <div class="chart-card">
+            <h3>Plot 01: Real-time Convergence Horizon</h3>
+            <div class="chart-container">
+              <canvas id="chartConvergence"></canvas>
+            </div>
           </div>
 
-          <!-- Card for Plot 03: Precision-Recall Profile -->
-          <div class="card chart-card">
-            <h3>Plot 03: Area Under Precision-Recall Curve (AUPR)</h3>
-            <canvas id="chartSecurityTax"></canvas>
+          <div class="chart-card">
+            <h3>Plot 02: Area Under Precision-Recall Curve (AUPR)</h3>
+            <div class="chart-container">
+              <canvas id="chartSecurityTax"></canvas>
+            </div>
           </div>
 
-          <div class="card chart-card">
-            <h3>Plot 06: Lattice Noise Budget Horizon</h3>
-            <canvas id="chartNoise"></canvas>
+          <div class="chart-card">
+            <h3>Plot 03: Lattice Noise Budget Horizon</h3>
+            <div class="chart-container">
+              <canvas id="chartNoise"></canvas>
+            </div>
           </div>
 
-          <div class="card chart-card">
-            <h3>Plot 07: SMOTE Class Imbalance Lift Profile</h3>
-            <canvas id="chartSmote"></canvas>
+          <div class="chart-card">
+            <h3>Plot 04: SMOTE Class Imbalance Lift Profile</h3>
+            <div class="chart-container">
+              <canvas id="chartSmote"></canvas>
+            </div>
           </div>
 
-          <div class="card chart-card">
-            <h3>Plot 09: Differential Privacy Utility Bounds</h3>
-            <canvas id="chartDpTradeoff"></canvas>
+          <div class="chart-card">
+            <h3>Plot 05: Differential Privacy Utility Bounds</h3>
+            <div class="chart-container">
+              <canvas id="chartDpTradeoff"></canvas>
+            </div>
           </div>
 
-          <div class="card chart-card">
-            <h3>Plot 10: Cryptographic Weight Entropy (Blindness)</h3>
-            <canvas id="chartEntropy"></canvas>
+          <div class="chart-card">
+            <h3>Plot 06: Cryptographic Weight Entropy (Blindness)</h3>
+            <div class="chart-container">
+              <canvas id="chartEntropy"></canvas>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Live Terminal Simulator Output Window -->
-      <section
-        class="log-container"
-        id="terminalLog"
-        aria-label="System Terminal Logs"
-      >
-        <div class="log-entry">
-          [SYSTEM REBOOT] Initializing primary Ring-LWE coordination nodes...
+      <section class="terminal-card" aria-label="System Terminal Logs">
+        <div class="terminal-title">
+          Headless Subsystem Execution Logger Window
         </div>
-        <div class="log-entry">
-          [NETWORK AUTH] System token matching established safely using baseline
-          secrets.
+        <div class="terminal-log" id="terminalLog">
+          <div class="log-entry">
+            [SYSTEM REBOOT] Initializing primary Ring-LWE coordination nodes...
+          </div>
+          <div class="log-entry">
+            [NETWORK AUTH] Request mapping initialized using Netlify Secure
+            proxy gateways.
+          </div>
         </div>
       </section>
     </main>

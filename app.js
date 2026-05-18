@@ -1,15 +1,13 @@
 /**
  * Hardened Production Dashboard Control Engine
- * Refactored to align seamlessly with FastAPIs /metrics explicit dictionary schema.
+ * Refactored to align seamlessly with FastAPI's /metrics explicit dictionary schema.
  * Addresses: Chart.js Memory Leak Caps, Scale Mismatch Resiliency, and Safe Degradation.
  */
 
-const API_URL =
-  window.__API_BASE_URL__ || "https://pq-federated-coordinator-v3.onrender.com";
-// Enforce dynamic authorization injector pattern; avoid static hardcoded fallbacks
-const AUTH_TOKEN = window.__API_AUTH_TOKEN__ || "";
+// Production API Base Routing Hook configured for Netlify Edge Proxies
+const API_URL = "/api";
 const UPDATE_INTERVAL_MS = 6000;
-const MAX_DATA_ROLLING_WINDOW = 50; // Fixes Q43: Strict sliding memory ceiling constraint
+const MAX_DATA_ROLLING_WINDOW = 50; // Strict sliding memory ceiling constraint
 const TOTAL_EXPECTED_ROUNDS = 20; // Normalizes progress bar to absolute system constraints
 
 let lastKnownRound = -1;
@@ -88,8 +86,6 @@ function initCharts() {
     });
   }
 
-  // FIXED: Resolved metric scale mismatch by re-mapping dataset variables to track
-  // live normalized AUPR vectors while migrating latency metrics to standard sub-loggers.
   const chartSecurityTaxCtx = document
     .getElementById("chartSecurityTax")
     ?.getContext("2d");
@@ -116,7 +112,7 @@ function initCharts() {
         scales: {
           y: {
             beginAtZero: true,
-            max: 1.0, // Bounds tracking limits strictly to standard metric normalization
+            max: 1.0,
             title: {
               display: true,
               text: "AUPR Score / Metric Value",
@@ -163,7 +159,6 @@ function initCharts() {
     });
   }
 
-  // Initialize Static Comparison Charts (SMOTE, DP, Entropy)
   const chartSmoteCtx = document.getElementById("chartSmote")?.getContext("2d");
   if (chartSmoteCtx) {
     dashboardCharts.smote = new Chart(chartSmoteCtx, {
@@ -348,52 +343,40 @@ async function syncLiveTelemetry() {
   try {
     const statusHeader = document.getElementById("connection-status");
 
-    const headers = { Accept: "application/json" };
-    if (AUTH_TOKEN) {
-      headers["X-Client-Token"] = AUTH_TOKEN;
-    }
-
-    const res = await fetch(`${API_URL}/metrics`, {
+    // Routed through Netlify headers; auth token validation occurs securely at backend middleware layers
+    const response = await fetch(`${API_URL}/metrics`, {
       method: "GET",
-      headers: headers,
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
     });
 
-    if (!res.ok) {
-      if (res.status === 401 || res.status === 403) {
-        if (statusHeader)
-          statusHeader.innerHTML =
-            'SYSTEM MONITOR: <span class="status-offline">AUTHENTICATION REJECTED (403)</span>';
-        writeLog(
-          "auth-error",
-          "Credentials rejected by X-Client-Token enforcement rules.",
-        );
-      } else {
-        if (statusHeader)
-          statusHeader.innerHTML = `SYSTEM MONITOR: <span class="status-offline">DISCONNECTED (${res.status})</span>`;
+    if (!response.ok) {
+      if (statusHeader) {
+        statusHeader.innerHTML = `SYSTEM MONITOR: <span class="status-offline">DISCONNECTED (${response.status})</span>`;
       }
       return;
     }
 
-    if (statusHeader)
+    if (statusHeader) {
       statusHeader.innerHTML =
         'SYSTEM MONITOR: <span class="status-online">SYNCHRONIZED WITH ORCHESTRATOR</span>';
+    }
 
-    const payload = await res.json();
+    const payload = await response.json();
     let metricsLog = payload.rounds;
     if (!Array.isArray(metricsLog) || metricsLog.length === 0) return;
 
-    // FIXED: Maps to row.round_number based on your exact CSV column headers
     metricsLog.sort((a, b) => {
       const roundA = parseInt(a.round_number || 0, 10);
       const roundB = parseInt(b.round_number || 0, 10);
       return roundA - roundB;
     });
 
-    // Isolate true latest state vector at the tail index
     const currentVector = metricsLog[metricsLog.length - 1];
     const activeRound = parseInt(currentVector.round_number || 0, 10);
 
-    // Populate primary text metrics safely
     const metaRoundEl = document.getElementById("meta-round");
     const metaAccuracyEl = document.getElementById("meta-accuracy");
     const metaLossEl = document.getElementById("meta-loss");
@@ -407,7 +390,6 @@ async function syncLiveTelemetry() {
     if (metaClientsEl)
       metaClientsEl.innerText = parseInt(currentVector.client_count, 10) || 0;
 
-    // Progress Bar linear scale modifier
     const percentageScale = Math.min(
       (activeRound / TOTAL_EXPECTED_ROUNDS) * 100,
       100,
@@ -417,7 +399,6 @@ async function syncLiveTelemetry() {
       progressBar.style.width = `${percentageScale}%`;
     }
 
-    // Optimization check: Skip rendering pipeline recalculations if state has not mutated
     if (activeRound === lastKnownRound) return;
     lastKnownRound = activeRound;
 
@@ -426,18 +407,15 @@ async function syncLiveTelemetry() {
       `Inbound verification validation passed for round ${activeRound}. Mutating timeline.`,
     );
 
-    // Enforce sliding FIFO window memory allocation bounds to prevent ChartJS canvas leaks
     let processedLogs = metricsLog;
     if (processedLogs.length > MAX_DATA_ROLLING_WINDOW) {
       processedLogs = processedLogs.slice(-MAX_DATA_ROLLING_WINDOW);
     }
 
-    // Explicitly construct labels matching your CSV schema layout
     const timelineLabels = processedLogs.map(
       (row) => `Round ${row.round_number || 0}`,
     );
 
-    // Update Chart 01: Training convergence limits
     if (dashboardCharts.convergence) {
       dashboardCharts.convergence.data.labels = timelineLabels;
       dashboardCharts.convergence.data.datasets[0].data = processedLogs.map(
@@ -449,7 +427,6 @@ async function syncLiveTelemetry() {
       dashboardCharts.convergence.update("none");
     }
 
-    // FIXED: Adjusted to assign standard area metrics (`row.pr_auc`) within the [0, 1.0] viewport boundary.
     if (dashboardCharts.securityTax) {
       dashboardCharts.securityTax.data.labels = timelineLabels;
       dashboardCharts.securityTax.data.datasets[0].data = processedLogs.map(
@@ -458,7 +435,6 @@ async function syncLiveTelemetry() {
       dashboardCharts.securityTax.update("none");
     }
 
-    // Auxiliary Hardware Performance Telemetry Tracking Profiler
     const lastEncryptionTime = parseFloat(
       currentVector.encryption_time_ms || 0.0,
     ).toFixed(1);
@@ -467,7 +443,6 @@ async function syncLiveTelemetry() {
       `Client computational overhead profiles verified: Lattice encryption time = ${lastEncryptionTime} ms.`,
     );
 
-    // Update Chart 03: Post-Quantum Lattice Noise Bounds
     if (dashboardCharts.noise) {
       dashboardCharts.noise.data.labels = timelineLabels;
       dashboardCharts.noise.data.datasets[0].data = processedLogs.map(
