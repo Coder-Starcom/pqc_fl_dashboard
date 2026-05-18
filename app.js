@@ -344,12 +344,13 @@ async function syncLiveTelemetry() {
   try {
     const statusHeader = document.getElementById("connection-status");
 
-    // Routed through Netlify headers; auth token validation occurs securely at backend middleware layers
+    // FIXES 401: Explicitly forwards the expected authorization credential vector
     const response = await fetch(`${API_URL}/metrics`, {
       method: "GET",
       headers: {
         Accept: "application/json",
         "X-Requested-With": "XMLHttpRequest",
+        "X-Client-Token": AUTH_TOKEN,
       },
     });
 
@@ -383,7 +384,9 @@ async function syncLiveTelemetry() {
     const metaLossEl = document.getElementById("meta-loss");
     const metaClientsEl = document.getElementById("meta-clients");
 
-    if (metaRoundEl) metaRoundEl.innerText = `R: ${activeRound}`;
+    // Formats precisely to track relative completion ceilings safely
+    if (metaRoundEl)
+      metaRoundEl.innerText = `R: ${activeRound} / ${TOTAL_EXPECTED_ROUNDS}`;
     if (metaAccuracyEl)
       metaAccuracyEl.innerText = `${(parseFloat(currentVector.accuracy || 0.0) * 100).toFixed(1)}%`;
     if (metaLossEl)
@@ -398,6 +401,7 @@ async function syncLiveTelemetry() {
     const progressBar = document.getElementById("round-progress");
     if (progressBar) {
       progressBar.style.width = `${percentageScale}%`;
+      progressBar.setAttribute("aria-valuenow", percentageScale.toFixed(0));
     }
 
     if (activeRound === lastKnownRound) return;
@@ -408,31 +412,36 @@ async function syncLiveTelemetry() {
       `Inbound verification validation passed for round ${activeRound}. Mutating timeline.`,
     );
 
-    let processedLogs = metricsLog;
-    if (processedLogs.length > MAX_DATA_ROLLING_WINDOW) {
-      processedLogs = processedLogs.slice(-MAX_DATA_ROLLING_WINDOW);
+    if (metricsLog.length > MAX_DATA_ROLLING_WINDOW) {
+      metricsLog = metricsLog.slice(-MAX_DATA_ROLLING_WINDOW);
     }
 
-    const timelineLabels = processedLogs.map(
-      (row) => `Round ${row.round_number || 0}`,
-    );
+    // Single-pass optimization layout step
+    const timelineLabels = [];
+    const accuracyData = [];
+    const lossData = [];
+    const prAucData = [];
+    const noiseData = [];
+
+    for (let i = 0; i < metricsLog.length; i++) {
+      const row = metricsLog[i];
+      timelineLabels.push(`Round ${row.round_number || 0}`);
+      accuracyData.push(parseFloat(row.accuracy || 0.0));
+      lossData.push(parseFloat(row.loss || 0.0));
+      prAucData.push(parseFloat(row.pr_auc || row.local_pr_auc) || 0.0);
+      noiseData.push(parseFloat(row.noise_budget) || 0.0);
+    }
 
     if (dashboardCharts.convergence) {
       dashboardCharts.convergence.data.labels = timelineLabels;
-      dashboardCharts.convergence.data.datasets[0].data = processedLogs.map(
-        (row) => parseFloat(row.accuracy || 0.0),
-      );
-      dashboardCharts.convergence.data.datasets[1].data = processedLogs.map(
-        (row) => parseFloat(row.loss || 0.0),
-      );
+      dashboardCharts.convergence.data.datasets[0].data = accuracyData;
+      dashboardCharts.convergence.data.datasets[1].data = lossData;
       dashboardCharts.convergence.update("none");
     }
 
     if (dashboardCharts.securityTax) {
       dashboardCharts.securityTax.data.labels = timelineLabels;
-      dashboardCharts.securityTax.data.datasets[0].data = processedLogs.map(
-        (row) => parseFloat(row.pr_auc || row.local_pr_auc) || 0.0,
-      );
+      dashboardCharts.securityTax.data.datasets[0].data = prAucData;
       dashboardCharts.securityTax.update("none");
     }
 
@@ -446,9 +455,7 @@ async function syncLiveTelemetry() {
 
     if (dashboardCharts.noise) {
       dashboardCharts.noise.data.labels = timelineLabels;
-      dashboardCharts.noise.data.datasets[0].data = processedLogs.map(
-        (row) => parseFloat(row.noise_budget) || 0.0,
-      );
+      dashboardCharts.noise.data.datasets[0].data = noiseData;
       dashboardCharts.noise.update("none");
     }
 
