@@ -452,14 +452,6 @@ async function syncLiveTelemetry() {
       dashboardCharts.securityTax.update("none");
     }
 
-    const lastEncryptionTime = parseFloat(
-      currentVector.encryption_time_ms || 0.0,
-    ).toFixed(1);
-    writeLog(
-      "performance",
-      `Client computational overhead profiles verified: Lattice encryption time = ${lastEncryptionTime} ms.`,
-    );
-
     if (dashboardCharts.noise) {
       dashboardCharts.noise.data.labels = timelineLabels;
       dashboardCharts.noise.data.datasets[0].data = noiseData;
